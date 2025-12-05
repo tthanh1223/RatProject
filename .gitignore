@@ -1,0 +1,58 @@
+# ==========================
+# Windows
+# ==========================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ==========================
+# Visual Studio / C# 
+# ==========================
+# Build folders
+bin/
+obj/
+
+# User-specific files
+*.csproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# ==========================
+# Python
+# ==========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+env/
+*.env
+
+# ==========================
+# Logs / temp
+# ==========================
+*.log
+*.tmp
+*.temp
+
+# ==========================
+# Executables / binaries
+# ==========================
+*.exe
+*.dll
+*.lib
+*.so
+*.dylib
+
+# ==========================
+# Others
+# ==========================
+pressed_keys.txt
+keylogger.cpp
+keylogger.exe

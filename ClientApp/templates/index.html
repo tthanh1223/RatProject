@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Client</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        
+        /* Khu vực trạng thái */
+        #status { text-align: center; font-weight: bold; margin-bottom: 15px; padding: 10px; border-radius: 4px; background-color: #ffe6e6; color: red; }
+        .connected { background-color: #e6fffa !important; color: green !important; }
+
+        /* Khu vực hiển thị tin nhắn */
+        #chat-box { 
+            height: 300px; 
+            border: 1px solid #ddd; 
+            overflow-y: scroll; 
+            padding: 10px; 
+            margin-bottom: 15px; 
+            background: #fafafa; 
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Message styling */
+        .message { padding: 8px 12px; border-radius: 15px; max-width: 70%; word-wrap: break-word; font-size: 14px; }
+        .msg-sent { align-self: flex-end; background-color: #007bff; color: white; }
+        .msg-received { align-self: flex-start; background-color: #e9ecef; color: #333; }
+        .system-log { align-self: center; background-color: transparent; color: #888; font-size: 12px; font-style: italic; }
+
+        /* Khu vực nhập liệu */
+        .input-area { display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
+        button { padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #218838; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Web Client ↔ WinApp Server</h2>
+    
+    <div id="status">Đang ngắt kết nối...</div>
+
+    <div id="chat-box">
+        </div>
+
+    <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Nhập tin nhắn (VD: PING)..." onkeypress="handleEnter(event)">
+        <button id="sendBtn" onclick="sendMessage()" disabled>Gửi</button>
+    </div>
+</div>
+
+<script>
+    // --- CẤU HÌNH ---
+    // Địa chỉ WinApp WebSocket Server (phải khớp với C# Server bạn đã chạy)
+    const WS_URL = "ws://localhost:8080/"; 
+    
+    let socket = null;
+    const statusDiv = document.getElementById("status");
+    const chatBox = document.getElementById("chat-box");
+    const sendBtn = document.getElementById("sendBtn");
+    const msgInput = document.getElementById("messageInput");
+
+    function connectWebSocket() {
+        addLog("Đang kết nối tới " + WS_URL + " ...");
+        
+        // 1. Khởi tạo kết nối
+        socket = new WebSocket(WS_URL);
+
+        // 2. Khi kết nối thành công
+        socket.onopen = function(e) {
+            statusDiv.textContent = "✅ Đã kết nối với WinApp Server";
+            statusDiv.classList.add("connected");
+            sendBtn.disabled = false;
+            addLog("Kết nối thành công!");
+        };
+
+        // 3. Khi nhận tin nhắn từ Server
+        socket.onmessage = function(event) {
+            const data = event.data;
+            // Hiển thị tin nhắn nhận được (bên trái)
+            addMessage(data, 'received');
+        };
+
+        // 4. Khi kết nối bị đóng
+        socket.onclose = function(event) {
+            statusDiv.textContent = "❌ Mất kết nối. Đang thử lại...";
+            statusDiv.classList.remove("connected");
+            sendBtn.disabled = true;
+            addLog("Mất kết nối. Code: " + event.code);
+            
+            // Tự động kết nối lại sau 3 giây
+            setTimeout(connectWebSocket, 3000);
+        };
+
+        // 5. Khi có lỗi
+        socket.onerror = function(error) {
+            console.error("WebSocket Error:", error);
+        };
+    }
+
+    // Hàm gửi tin nhắn
+    function sendMessage() {
+        const msg = msgInput.value.trim();
+        if (msg && socket && socket.readyState === WebSocket.OPEN) {
+            // Gửi dữ liệu đi
+            socket.send(msg);
+            
+            // Hiển thị tin nhắn đã gửi (bên phải)
+            addMessage(msg, 'sent');
+            msgInput.value = ""; // Xóa ô nhập
+            msgInput.focus();
+        }
+    }
+
+    // Hàm hiển thị bong bóng chat
+    function addMessage(text, type) {
+        const div = document.createElement("div");
+        div.classList.add("message");
+        
+        if (type === 'sent') {
+            div.classList.add("msg-sent");
+            div.textContent = text; // Tin mình gửi
+        } else {
+            div.classList.add("msg-received");
+            div.textContent = "Server: " + text; // Server gửi
+        }
+
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight; // Tự cuộn xuống dưới
+    }
+
+    // Hàm hiển thị log hệ thống (chữ nhỏ ở giữa)
+    function addLog(text) {
+        const div = document.createElement("div");
+        div.classList.add("system-log");
+        div.textContent = "-- " + text + " --";
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Xử lý phím Enter
+    function handleEnter(e) {
+        if (e.key === 'Enter') sendMessage();
+    }
+
+    // Bắt đầu kết nối khi trang web tải xong
+    window.onload = connectWebSocket;
+</script>
+
+</body>
+</html>
