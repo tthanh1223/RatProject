@@ -86,12 +86,22 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
 
         private static IntPtr SetHook(LowLevelKeyboardProc proc)
         {
-            using (Process curProcess = Process.GetCurrentProcess())
-            using (ProcessModule curModule = curProcess.MainModule)
+            using Process curProcess = Process.GetCurrentProcess();
+            using ProcessModule? curModule = curProcess.MainModule;
+
+            string moduleName = curModule?.ModuleName ?? string.Empty;
+
+            IntPtr handle = GetModuleHandle(moduleName);
+
+            if (handle == IntPtr.Zero)
             {
-                return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
+                // fallback: lấy handle của chính process
+                handle = curProcess.Handle;
             }
+
+            return SetWindowsHookEx(WH_KEYBOARD_LL, proc, handle, 0);
         }
+
 
         private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
