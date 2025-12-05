@@ -13,7 +13,7 @@ namespace WebSocketTest
             try
             {
                 // Lấy kích thước màn hình chính
-                Rectangle bounds = Screen.PrimaryScreen.Bounds;
+                Rectangle bounds = Screen.PrimaryScreen?.Bounds ?? Rectangle.Empty;
 
                 using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height))
                 {
