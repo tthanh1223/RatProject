@@ -140,24 +140,37 @@ namespace WebSocketTest
             bool isFirst = true;
             foreach (var p in processes)
             {
-                // LOGIC LỌC: Chỉ lấy process có Tiêu đề cửa sổ (MainWindowTitle)
-                if (!string.IsNullOrEmpty(p.MainWindowTitle))
+                string title = p.MainWindowTitle;
+                string processName = p.ProcessName;
+
+                // --- FIX BUG EXPLORER ---
+                // Nếu là explorer, dù không có title vẫn lấy, và đặt tên hiển thị thủ công
+                if (processName.ToLower() == "explorer")
+                {
+                    // Windows Explorer thường có MainWindowHandle != 0 nhưng Title có thể rỗng
+                    if (string.IsNullOrEmpty(title))
+                    {
+                        title = "Windows Explorer (Shell/Folder)";
+                    }
+                }
+
+                // --- ĐIỀU KIỆN LỌC ---
+                // Chỉ lấy process có Tiêu đề cửa sổ (hoặc là explorer đã được fix ở trên)
+                if (!string.IsNullOrEmpty(title))
                 {
                     if (!isFirst) sb.Append(",");
                     
-                    // Lấy thêm MainWindowTitle để hiển thị cho rõ
-                    // Cần Escape ký tự đặc biệt trong JSON (ví dụ dấu ngoặc kép, gạch chéo)
-                    string safeTitle = p.MainWindowTitle
+                    // Xử lý Escape ký tự đặc biệt cho JSON
+                    string safeTitle = title
                         .Replace("\\", "\\\\")
                         .Replace("\"", "\\\""); 
                     
-                    sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{p.ProcessName}\", \"tieu_de\": \"{safeTitle}\"}}");
+                    sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{processName}\", \"tieu_de\": \"{safeTitle}\"}}");
                     isFirst = false;
                 }
             }
             sb.Append("]");
             return sb.ToString();
-
         }
         // Lệnh list process
         private string GetProcessList()
