@@ -14,17 +14,49 @@ namespace WebSocketTest
 
         private void btnStart_Click(object sender, EventArgs e)
         {
-            // Tạo server và truyền hàm Log vào
-            _server = new SimpleWebSocketServer(LogToUI);
-            
-            // Chạy server ở localhost cổng 8080
-            _server.Start("http://localhost:8080/");
-            
-            btnStart.Enabled = false;
-            btnStart.Text = "Running...";
+            try 
+            {
+                // Truyền hàm LogToUI vào server để nó gọi khi cần in log
+                _server = new SimpleWebSocketServer(LogToUI);
+                _server.Start("http://localhost:8080/");
+                
+                btnStart.Enabled = false;
+                btnStart.Text = "Running...";
+                LogToUI("Server sẵn sàng. Hãy kết nối Client!");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi (Chạy Admin chưa?): " + ex.Message);
+            }
         }
 
-        // Hàm ghi log an toàn với luồng (Thread-safe)
+        // SỰ KIỆN MỚI: Bấm nút Gửi
+        private async void btnSend_Click(object sender, EventArgs e)
+        {
+            if (_server == null) return;
+
+            string msg = txtMessage.Text.Trim();
+            if (!string.IsNullOrEmpty(msg))
+            {
+                // Gọi hàm gửi tin nhắn của Server
+                await _server.SendToClient(msg);
+                
+                // Xóa ô nhập sau khi gửi
+                txtMessage.Clear();
+                txtMessage.Focus();
+            }
+        }
+
+        // Cho phép ấn Enter để gửi luôn
+        private void txtMessage_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                btnSend_Click(this, new EventArgs());
+                e.SuppressKeyPress = true; // Chặn tiếng 'ding' của Windows
+            }
+        }
+
         private void LogToUI(string msg)
         {
             if (this.InvokeRequired)
