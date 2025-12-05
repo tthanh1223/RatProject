@@ -17,3 +17,19 @@ Hướng dẫn chạy app:
 
 
 Anh em có code gì thì nhớ pull về sửa commit, branch main luôn không cần branch phụ
+
+
+## Cách chạy nữa chứ quên 
+- Nhớ là phải cài mấy cái trên
+- Đầu tiên dùng terminal chỉ vào file WebSocketTest ấy
+- `cd ServerApp/WebSocketTest`
+- chạy `dotnet run`
+- hiện lên cái window, bấm start server thôi
+
+- Sau đó tạo terminal khác vào `cd ClientApp`
+- chạy `py app.py`
+- rồi vào cái localhost - xong ngồi test thử
+
+
+
+# LƯU Ý: SỬA GÌ COMMIT ĐÓ DỄ THEO DÕI
