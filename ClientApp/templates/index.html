@@ -3,156 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Chat Client</title>
+    <title>System Controller</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; }
-        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #333; }
+        body { font-family: sans-serif; margin: 0; display: flex; height: 100vh; background-color: #f0f2f5; }
         
-        /* Khu vực trạng thái */
-        #status { text-align: center; font-weight: bold; margin-bottom: 15px; padding: 10px; border-radius: 4px; background-color: #ffe6e6; color: red; }
-        .connected { background-color: #e6fffa !important; color: green !important; }
+        /* Layout chia đôi */
+        .main-panel { flex: 7; padding: 20px; overflow-y: auto; }
+        .side-panel { flex: 3; background: #fff; border-left: 1px solid #ccc; display: flex; flex-direction: column; padding: 10px; }
 
-        /* Khu vực hiển thị tin nhắn */
-        #chat-box { 
-            height: 300px; 
-            border: 1px solid #ddd; 
-            overflow-y: scroll; 
-            padding: 10px; 
-            margin-bottom: 15px; 
-            background: #fafafa; 
-            border-radius: 4px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+        /* Bảng danh sách App */
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #007bff; color: white; position: sticky; top: 0; }
+        tr:hover { background-color: #f1f1f1; cursor: pointer; }
+        tr.selected { background-color: #cce5ff; }
 
-        /* Message styling */
-        .message { padding: 8px 12px; border-radius: 15px; max-width: 70%; word-wrap: break-word; font-size: 14px; }
-        .msg-sent { align-self: flex-end; background-color: #007bff; color: white; }
-        .msg-received { align-self: flex-start; background-color: #e9ecef; color: #333; }
-        .system-log { align-self: center; background-color: transparent; color: #888; font-size: 12px; font-style: italic; }
+        /* Các nút chức năng */
+        .controls { display: flex; gap: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-wrap: wrap; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1; }
+        button { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; color: white; font-weight: bold; }
+        .btn-list { background-color: #17a2b8; }
+        .btn-stop { background-color: #dc3545; }
+        .btn-start { background-color: #28a745; }
+        button:hover { opacity: 0.9; }
 
-        /* Khu vực nhập liệu */
-        .input-area { display: flex; gap: 10px; }
-        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
-        button { padding: 10px 20px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #218838; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        /* Chat log bên phải */
+        #chat-log { flex: 1; overflow-y: auto; border: 1px solid #eee; margin-bottom: 10px; padding: 5px; font-size: 12px; font-family: monospace; background: #fafafa; }
+        .log-line { margin-bottom: 4px; padding: 4px; border-bottom: 1px solid #eee; }
+        .status-ok { color: green; font-weight: bold; }
+        .status-err { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Web Client ↔ WinApp Server</h2>
-    
-    <div id="status">Đang ngắt kết nối...</div>
-
-    <div id="chat-box">
+    <div class="main-panel">
+        <h2>🚀 Bảng Điều Khiển Hệ Thống</h2>
+        
+        <div class="controls">
+            <button class="btn-list" onclick="sendCmd('listApps')">🔄 Làm mới danh sách</button>
+        </div>
+        <br>
+        <div class="controls">
+            <input type="text" id="appName" placeholder="Nhập tên App (VD: notepad)...">
+            <button class="btn-stop" onclick="stopApp()">🛑 Dừng App</button>
+            <button class="btn-start" onclick="startApp()">▶ Khởi động App</button>
         </div>
 
-    <div class="input-area">
-        <input type="text" id="messageInput" placeholder="Nhập tin nhắn (VD: PING)..." onkeypress="handleEnter(event)">
-        <button id="sendBtn" onclick="sendMessage()" disabled>Gửi</button>
+        <h3>Danh sách ứng dụng đang chạy (<span id="appCount">0</span>)</h3>
+        <table id="appTable">
+            <thead>
+                <tr>
+                    <th width="100">PID</th>
+                    <th>Tên ứng dụng</th>
+                    <th width="100">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
     </div>
-</div>
+
+    <div class="side-panel">
+        <h4>📡 Log Kết Nối</h4>
+        <div id="status" class="status-err">Chưa kết nối</div>
+        <div id="chat-log"></div>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="chatInput" placeholder="Gửi chat...">
+            <button onclick="sendChat()" style="background: #6c757d;">Gửi</button>
+        </div>
+    </div>
 
 <script>
-    // --- CẤU HÌNH ---
-    // Địa chỉ WinApp WebSocket Server (phải khớp với C# Server bạn đã chạy)
-    const WS_URL = "ws://localhost:8080/"; 
-    
+    const WS_URL = "ws://localhost:8080/";
     let socket = null;
-    const statusDiv = document.getElementById("status");
-    const chatBox = document.getElementById("chat-box");
-    const sendBtn = document.getElementById("sendBtn");
-    const msgInput = document.getElementById("messageInput");
+    const tableBody = document.querySelector("#appTable tbody");
 
-    function connectWebSocket() {
-        addLog("Đang kết nối tới " + WS_URL + " ...");
-        
-        // 1. Khởi tạo kết nối
+    function connect() {
         socket = new WebSocket(WS_URL);
-
-        // 2. Khi kết nối thành công
-        socket.onopen = function(e) {
-            statusDiv.textContent = "✅ Đã kết nối với WinApp Server";
-            statusDiv.classList.add("connected");
-            sendBtn.disabled = false;
-            addLog("Kết nối thành công!");
-        };
-
-        // 3. Khi nhận tin nhắn từ Server
-        socket.onmessage = function(event) {
-            const data = event.data;
-            // Hiển thị tin nhắn nhận được (bên trái)
-            addMessage(data, 'received');
-        };
-
-        // 4. Khi kết nối bị đóng
-        socket.onclose = function(event) {
-            statusDiv.textContent = "❌ Mất kết nối. Đang thử lại...";
-            statusDiv.classList.remove("connected");
-            sendBtn.disabled = true;
-            addLog("Mất kết nối. Code: " + event.code);
-            
-            // Tự động kết nối lại sau 3 giây
-            setTimeout(connectWebSocket, 3000);
-        };
-
-        // 5. Khi có lỗi
-        socket.onerror = function(error) {
-            console.error("WebSocket Error:", error);
-        };
-    }
-
-    // Hàm gửi tin nhắn
-    function sendMessage() {
-        const msg = msgInput.value.trim();
-        if (msg && socket && socket.readyState === WebSocket.OPEN) {
-            // Gửi dữ liệu đi
-            socket.send(msg);
-            
-            // Hiển thị tin nhắn đã gửi (bên phải)
-            addMessage(msg, 'sent');
-            msgInput.value = ""; // Xóa ô nhập
-            msgInput.focus();
-        }
-    }
-
-    // Hàm hiển thị bong bóng chat
-    function addMessage(text, type) {
-        const div = document.createElement("div");
-        div.classList.add("message");
         
-        if (type === 'sent') {
-            div.classList.add("msg-sent");
-            div.textContent = text; // Tin mình gửi
-        } else {
-            div.classList.add("msg-received");
-            div.textContent = "Server: " + text; // Server gửi
+        socket.onopen = () => {
+            updateStatus("Đã kết nối", true);
+            sendCmd("listApps"); // Tự động lấy danh sách khi kết nối
+        };
+
+        socket.onmessage = (event) => {
+            const data = event.data;
+            try {
+                // Thử parse xem có phải JSON không
+                const json = JSON.parse(data);
+                
+                if (Array.isArray(json)) {
+                    // Trường hợp 1: Là danh sách App (Mảng)
+                    renderTable(json);
+                    logSystem("Đã cập nhật danh sách Apps.");
+                } else if (json.trang_thai) {
+                    // Trường hợp 2: Là thông báo trạng thái (Object)
+                    alert(json.thong_bao);
+                    logSystem(`[${json.trang_thai.toUpperCase()}] ${json.thong_bao}`);
+                    
+                    // Nếu thành công thì reload list
+                    if (json.trang_thai === 'thanh_cong') sendCmd('listApps');
+                }
+            } catch (e) {
+                // Trường hợp 3: Không phải JSON -> Là tin nhắn chat
+                logChat("Server", data);
+            }
+        };
+
+        socket.onclose = () => {
+            updateStatus("Mất kết nối - Đang thử lại...", false);
+            setTimeout(connect, 3000);
+        };
+    }
+
+    // --- CÁC HÀM XỬ LÝ GIAO DIỆN ---
+
+    function renderTable(apps) {
+        tableBody.innerHTML = "";
+        document.getElementById("appCount").textContent = apps.length;
+
+        apps.forEach(app => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${app.pid}</td>
+                <td onclick="selectApp('${app.ten}')"><b>${app.ten}</b></td>
+                <td><button class="btn-stop" style="padding:2px 8px; font-size:10px" onclick="quickStop('${app.ten}')">Kill</button></td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }
+
+    function selectApp(name) {
+        document.getElementById("appName").value = name;
+    }
+
+    // --- CÁC HÀM GỬI LỆNH ---
+
+    function sendCmd(cmd) {
+        if (socket && socket.readyState === 1) {
+            socket.send(cmd);
+            logSystem("Gửi lệnh: " + cmd);
+        } else alert("Chưa kết nối Server!");
+    }
+
+    function stopApp() {
+        const name = document.getElementById("appName").value;
+        if(name) sendCmd(`stopApp ${name}`);
+        else alert("Vui lòng nhập tên App!");
+    }
+    
+    function quickStop(name) {
+        if(confirm("Bạn chắc chắn muốn tắt " + name + "?")) {
+            sendCmd(`stopApp ${name}`);
         }
-
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight; // Tự cuộn xuống dưới
     }
 
-    // Hàm hiển thị log hệ thống (chữ nhỏ ở giữa)
-    function addLog(text) {
+    function startApp() {
+        const name = document.getElementById("appName").value;
+        if(name) sendCmd(`startApp ${name}`);
+        else alert("Vui lòng nhập tên App!");
+    }
+
+    function sendChat() {
+        const txt = document.getElementById("chatInput").value;
+        if(txt) {
+            socket.send(txt);
+            logChat("Me", txt);
+            document.getElementById("chatInput").value = "";
+        }
+    }
+
+    // --- HELPER LOG ---
+    function updateStatus(msg, isOk) {
+        const el = document.getElementById("status");
+        el.textContent = msg;
+        el.className = isOk ? "status-ok" : "status-err";
+    }
+
+    function logChat(sender, msg) {
         const div = document.createElement("div");
-        div.classList.add("system-log");
-        div.textContent = "-- " + text + " --";
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
+        div.className = "log-line";
+        div.innerHTML = `<b>${sender}:</b> ${msg}`;
+        document.getElementById("chat-log").prepend(div);
+    }
+    
+    function logSystem(msg) {
+        const div = document.createElement("div");
+        div.className = "log-line";
+        div.style.color = "#888";
+        div.innerHTML = `<i>${msg}</i>`;
+        document.getElementById("chat-log").prepend(div);
     }
 
-    // Xử lý phím Enter
-    function handleEnter(e) {
-        if (e.key === 'Enter') sendMessage();
-    }
-
-    // Bắt đầu kết nối khi trang web tải xong
-    window.onload = connectWebSocket;
+    window.onload = connect;
 </script>
 
 </body>
