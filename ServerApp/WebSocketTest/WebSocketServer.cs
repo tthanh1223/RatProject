@@ -104,6 +104,19 @@ namespace WebSocketTest
                     default:
                         if (cmd == "PING") return "PONG";
                         return command;
+                    // === CHỤP MÀN HÌNH ===
+                    case "get_screen":
+                        // 1. Gọi hàm chụp ảnh từ file ScreenCapture.cs
+                        string base64Image = ScreenCapture.GetScreenshotBase64();
+
+                        if (base64Image.StartsWith("ERROR"))
+                        {
+                            return JsonError("Lỗi chụp màn hình: " + base64Image);
+                        }
+
+                        // 2. Trả về JSON chứa dữ liệu ảnh
+                        // Lưu ý: Dữ liệu ảnh rất dài, nên gửi dạng JSON đặc biệt
+                        return $"{{\"type\": \"screen_capture\", \"data\": \"{base64Image}\"}}";
                 }
             }
             catch (Exception ex) { return JsonError("Lỗi Server: " + ex.Message); }
