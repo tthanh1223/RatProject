@@ -132,14 +132,20 @@ namespace WebSocketTest
             bool isFirst = true;
             foreach (var p in processes)
             {
+                // Lấy tiêu đề cửa sổ chính
                 string title = p.MainWindowTitle;
                 string pName = p.ProcessName;
-                if (pName.ToLower() == "explorer" && string.IsNullOrEmpty(title)) title = "Windows Explorer";
+
+                // --- SỬA ĐỔI: BỎ ĐOẠN ĐẶC CÁCH EXPLORER ---
+                // Chúng ta quay lại nguyên tắc: Có tiêu đề cửa sổ mới là App.
+                // Process explorer.exe (Taskbar) thường không có Title -> Sẽ bị ẩn khỏi tab Apps (Đúng ý đồ).
+                // Nếu bạn mở ổ C:\, explorer sẽ có title "Local Disk (C:)" -> Sẽ hiện (Đúng ý đồ).
 
                 if (!string.IsNullOrEmpty(title))
                 {
                     if (!isFirst) sb.Append(",");
-                    string safeTitle = title.Replace("\\", "\\\\").Replace("\"", "\\\"");
+                    
+                    string safeTitle = title.Replace("\\", "\\\\").Replace("\"", "\\\""); 
                     sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{pName}\", \"tieu_de\": \"{safeTitle}\"}}");
                     isFirst = false;
                 }
