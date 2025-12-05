@@ -3,199 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Controller</title>
+    <title>Task Manager Remote</title>
     <style>
-        body { font-family: sans-serif; margin: 0; display: flex; height: 100vh; background-color: #f0f2f5; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f7f6; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Layout chia đôi */
-        .main-panel { flex: 7; padding: 20px; overflow-y: auto; }
-        .side-panel { flex: 3; background: #fff; border-left: 1px solid #ccc; display: flex; flex-direction: column; padding: 10px; }
+        /* HEADER & TABS */
+        .header { background: #2c3e50; padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .tab-container { display: flex; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; color: #555; border-bottom: 3px solid transparent; transition: 0.3s; }
+        .tab:hover { background: #f8f9fa; }
+        .tab.active { border-bottom: 3px solid #007bff; color: #007bff; background: #eef7ff; }
 
-        /* Bảng danh sách App */
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #007bff; color: white; position: sticky; top: 0; }
-        tr:hover { background-color: #f1f1f1; cursor: pointer; }
-        tr.selected { background-color: #cce5ff; }
+        /* MAIN CONTENT */
+        .content { flex: 1; padding: 20px; overflow-y: hidden; display: flex; gap: 20px; }
+        
+        /* Left Panel (Tables) */
+        .view-panel { flex: 3; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+        .toolbar { padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
+        .scroll-area { flex: 1; overflow-y: auto; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { position: sticky; top: 0; background: #f8f9fa; text-align: left; padding: 12px; border-bottom: 2px solid #ddd; font-size: 13px; color: #666; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        tr:hover { background: #f1f8ff; }
+        
+        /* Right Panel (Chat/Log) */
+        .log-panel { flex: 1; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .log-header { padding: 10px; background: #eee; border-radius: 8px 8px 0 0; font-weight: bold; font-size: 13px; }
+        #chat-content { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .log-input { display: flex; padding: 10px; border-top: 1px solid #eee; }
 
-        /* Các nút chức năng */
-        .controls { display: flex; gap: 10px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); flex-wrap: wrap; }
-        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; flex: 1; }
-        button { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; color: white; font-weight: bold; }
-        .btn-list { background-color: #17a2b8; }
-        .btn-stop { background-color: #dc3545; }
-        .btn-start { background-color: #28a745; }
-        button:hover { opacity: 0.9; }
-
-        /* Chat log bên phải */
-        #chat-log { flex: 1; overflow-y: auto; border: 1px solid #eee; margin-bottom: 10px; padding: 5px; font-size: 12px; font-family: monospace; background: #fafafa; }
-        .log-line { margin-bottom: 4px; padding: 4px; border-bottom: 1px solid #eee; }
-        .status-ok { color: green; font-weight: bold; }
-        .status-err { color: red; font-weight: bold; }
+        /* Buttons & Inputs */
+        input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
+        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: 500; }
+        .btn-refresh { background: #17a2b8; }
+        .btn-exec { background: #28a745; }
+        .btn-kill { background: #dc3545; padding: 4px 10px; font-size: 12px; }
+        
+        /* Utils */
+        .hidden { display: none !important; }
+        .status-dot { height: 10px; width: 10px; background-color: #bbb; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .online { background-color: #28a745; }
+        .mem-col { color: #666; font-size: 13px; }
     </style>
 </head>
 <body>
 
-    <div class="main-panel">
-        <h2>🚀 Bảng Điều Khiển Hệ Thống</h2>
-        
-        <div class="controls">
-            <button class="btn-list" onclick="sendCmd('listApps')">🔄 Làm mới danh sách</button>
-        </div>
-        <br>
-        <div class="controls">
-            <input type="text" id="appName" placeholder="Nhập tên App (VD: notepad)...">
-            <button class="btn-stop" onclick="stopApp()">🛑 Dừng App</button>
-            <button class="btn-start" onclick="startApp()">▶ Khởi động App</button>
-        </div>
-
-        <h3>Danh sách ứng dụng đang chạy (<span id="appCount">0</span>)</h3>
-        <table id="appTable">
-        <thead>
-            <tr>
-                <th width="80">PID</th>
-                <th>Tiêu đề cửa sổ (Window Title)</th> <th width="150">Tên File (EXE)</th>
-                <th width="100">Hành động</th>
-            </tr>
-        </thead>
-        <tbody>
-            </tbody>
-    </table>
+    <div class="header">
+        <div>📡 Remote Controller</div>
+        <div style="font-size: 14px;"><span id="status-dot" class="status-dot"></span><span id="status-text">Disconnected</span></div>
     </div>
 
-    <div class="side-panel">
-        <h4>📡 Log Kết Nối</h4>
-        <div id="status" class="status-err">Chưa kết nối</div>
-        <div id="chat-log"></div>
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="chatInput" placeholder="Gửi chat...">
-            <button onclick="sendChat()" style="background: #6c757d;">Gửi</button>
+    <div class="tab-container">
+        <div class="tab active" onclick="switchTab('apps')">🖥️ Ứng dụng (Apps)</div>
+        <div class="tab" onclick="switchTab('processes')">⚙️ Tiến trình (Processes)</div>
+    </div>
+
+    <div class="content">
+        <div class="view-panel">
+            
+            <div id="toolbar-apps" class="toolbar">
+                <button class="btn-refresh" onclick="sendCmd('listApps')">🔄 Làm mới</button>
+                <div style="flex:1"></div>
+                <input type="text" id="appInput" placeholder="Tên file (vd: msedge)...">
+                <button class="btn-exec" onclick="startApp()">▶ Start App</button>
+            </div>
+
+            <div id="toolbar-processes" class="toolbar hidden">
+                <button class="btn-refresh" onclick="sendCmd('listProcesses')">🔄 Làm mới Process</button>
+                <div style="flex:1"></div>
+                <span style="color: #666; font-size: 13px;">Kill bằng PID an toàn hơn tên.</span>
+            </div>
+
+            <div class="scroll-area">
+                <table id="table-apps">
+                    <thead>
+                        <tr>
+                            <th width="60">PID</th>
+                            <th>Tiêu đề cửa sổ</th>
+                            <th>Tên File</th>
+                            <th width="80">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-apps"></tbody>
+                </table>
+
+                <table id="table-processes" class="hidden">
+                    <thead>
+                        <tr>
+                            <th width="80">PID</th>
+                            <th>Process Name</th>
+                            <th>Memory (MB)</th>
+                            <th width="80">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-processes"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="log-panel">
+            <div class="log-header">System Log</div>
+            <div id="chat-content"></div>
+            <div class="log-input">
+                <input type="text" id="chatInput" style="flex:1; margin-right:5px" placeholder="Chat...">
+                <button onclick="sendChat()" style="background:#6c757d">Gửi</button>
+            </div>
         </div>
     </div>
 
 <script>
     const WS_URL = "ws://localhost:8080/";
     let socket = null;
-    const tableBody = document.querySelector("#appTable tbody");
+    let currentTab = 'apps';
 
     function connect() {
         socket = new WebSocket(WS_URL);
         
         socket.onopen = () => {
-            updateStatus("Đã kết nối", true);
-            sendCmd("listApps"); // Tự động lấy danh sách khi kết nối
+            updateStatus(true);
+            refreshCurrentTab();
         };
 
         socket.onmessage = (event) => {
             const data = event.data;
             try {
-                // Thử parse xem có phải JSON không
+                // Parse JSON từ Server
                 const json = JSON.parse(data);
                 
-                if (Array.isArray(json)) {
-                    // Trường hợp 1: Là danh sách App (Mảng)
-                    renderTable(json);
-                    logSystem("Đã cập nhật danh sách Apps.");
-                } else if (json.trang_thai) {
-                    // Trường hợp 2: Là thông báo trạng thái (Object)
+                // 1. Nếu là dữ liệu danh sách Apps
+                if (json.type === 'apps') {
+                    renderApps(json.data);
+                    log(`Đã tải ${json.data.length} ứng dụng.`);
+                }
+                // 2. Nếu là dữ liệu danh sách Processes
+                else if (json.type === 'processes') {
+                    renderProcesses(json.data);
+                    log(`Đã tải ${json.data.length} tiến trình.`);
+                }
+                // 3. Thông báo trạng thái (Success/Error)
+                else if (json.trang_thai) {
                     alert(json.thong_bao);
-                    logSystem(`[${json.trang_thai.toUpperCase()}] ${json.thong_bao}`);
-                    
-                    // Nếu thành công thì reload list
-                    if (json.trang_thai === 'thanh_cong') sendCmd('listApps');
+                    log(`[${json.trang_thai}] ${json.thong_bao}`);
+                    if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
                 }
             } catch (e) {
-                // Trường hợp 3: Không phải JSON -> Là tin nhắn chat
-                logChat("Server", data);
+                // Chat message
+                log("Server: " + data);
             }
         };
 
         socket.onclose = () => {
-            updateStatus("Mất kết nối - Đang thử lại...", false);
+            updateStatus(false);
             setTimeout(connect, 3000);
         };
     }
 
-    // --- CÁC HÀM XỬ LÝ GIAO DIỆN ---
+    // --- TAB LOGIC ---
+    function switchTab(tab) {
+        currentTab = tab;
+        
+        // UI Toggles
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
 
-    function renderTable(apps) {
-    tableBody.innerHTML = "";
-    document.getElementById("appCount").textContent = apps.length;
-
-    apps.forEach(app => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${app.pid}</td>
-            <td style="color:#0056b3; font-weight:500">${app.tieu_de}</td>
-            <td onclick="selectApp('${app.ten}')" style="cursor:pointer; color:#dc3545">
-                ${app.ten}.exe
-            </td>
-            <td>
-                <button class="btn-stop" style="padding:4px 8px; font-size:11px" onclick="quickStop('${app.ten}')">
-                    Đóng
-                </button>
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-    // --- CÁC HÀM GỬI LỆNH ---
-
-    function sendCmd(cmd) {
-        if (socket && socket.readyState === 1) {
-            socket.send(cmd);
-            logSystem("Gửi lệnh: " + cmd);
-        } else alert("Chưa kết nối Server!");
-    }
-
-    function stopApp() {
-        const name = document.getElementById("appName").value;
-        if(name) sendCmd(`stopApp ${name}`);
-        else alert("Vui lòng nhập tên App!");
-    }
-    
-    function quickStop(name) {
-        if(confirm("Bạn chắc chắn muốn tắt " + name + "?")) {
-            sendCmd(`stopApp ${name}`);
+        if (tab === 'apps') {
+            document.getElementById('toolbar-apps').classList.remove('hidden');
+            document.getElementById('table-apps').classList.remove('hidden');
+            document.getElementById('toolbar-processes').classList.add('hidden');
+            document.getElementById('table-processes').classList.add('hidden');
+        } else {
+            document.getElementById('toolbar-apps').classList.add('hidden');
+            document.getElementById('table-apps').classList.add('hidden');
+            document.getElementById('toolbar-processes').classList.remove('hidden');
+            document.getElementById('table-processes').classList.remove('hidden');
         }
+
+        refreshCurrentTab();
     }
 
+    function refreshCurrentTab() {
+        if (!socket || socket.readyState !== 1) return;
+        if (currentTab === 'apps') sendCmd('listApps');
+        else sendCmd('listProcesses');
+    }
+
+    // --- RENDER FUNCTIONS ---
+    function renderApps(list) {
+        const tbody = document.getElementById('tbody-apps');
+        tbody.innerHTML = '';
+        list.forEach(app => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${app.pid}</td>
+                    <td style="color:#007bff; font-weight:500">${app.tieu_de}</td>
+                    <td>${app.ten}.exe</td>
+                    <td><button class="btn-kill" onclick="stopApp('${app.ten}')">Close</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    function renderProcesses(list) {
+        const tbody = document.getElementById('tbody-processes');
+        tbody.innerHTML = '';
+        list.forEach(proc => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${proc.pid}</td>
+                    <td><b>${proc.ten}</b></td>
+                    <td class="mem-col">${proc.mem} MB</td>
+                    <td><button class="btn-kill" style="background:#343a40" onclick="killProcess(${proc.pid})">Kill</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    // --- ACTIONS ---
+    function sendCmd(cmd) {
+        if(socket && socket.readyState === 1) socket.send(cmd);
+    }
+
+    // App Actions (Theo Tên)
     function startApp() {
-        const name = document.getElementById("appName").value;
+        const name = document.getElementById('appInput').value;
         if(name) sendCmd(`startApp ${name}`);
-        else alert("Vui lòng nhập tên App!");
+    }
+    function stopApp(name) {
+        if(confirm(`Đóng cửa sổ ứng dụng '${name}'?`)) sendCmd(`stopApp ${name}`);
+    }
+
+    // Process Actions (Theo PID)
+    function killProcess(pid) {
+        if(confirm(`CẢNH BÁO: Bạn muốn buộc dừng Process ID ${pid}?`)) {
+            sendCmd(`killProcess ${pid}`);
+        }
     }
 
     function sendChat() {
-        const txt = document.getElementById("chatInput").value;
-        if(txt) {
-            socket.send(txt);
-            logChat("Me", txt);
-            document.getElementById("chatInput").value = "";
+        const val = document.getElementById('chatInput').value;
+        if(val) {
+            socket.send(val);
+            log("Me: " + val);
+            document.getElementById('chatInput').value = '';
         }
     }
 
-    // --- HELPER LOG ---
-    function updateStatus(msg, isOk) {
-        const el = document.getElementById("status");
-        el.textContent = msg;
-        el.className = isOk ? "status-ok" : "status-err";
+    // --- UTILS ---
+    function log(msg) {
+        const div = document.createElement('div');
+        div.style.marginBottom = "5px";
+        div.style.borderBottom = "1px solid #eee";
+        div.innerText = msg;
+        document.getElementById('chat-content').prepend(div);
     }
 
-    function logChat(sender, msg) {
-        const div = document.createElement("div");
-        div.className = "log-line";
-        div.innerHTML = `<b>${sender}:</b> ${msg}`;
-        document.getElementById("chat-log").prepend(div);
-    }
-    
-    function logSystem(msg) {
-        const div = document.createElement("div");
-        div.className = "log-line";
-        div.style.color = "#888";
-        div.innerHTML = `<i>${msg}</i>`;
-        document.getElementById("chat-log").prepend(div);
+    function updateStatus(isOnline) {
+        const dot = document.getElementById('status-dot');
+        const txt = document.getElementById('status-text');
+        if(isOnline) {
+            dot.classList.add('online');
+            txt.innerText = "Connected";
+            txt.style.color = "green";
+        } else {
+            dot.classList.remove('online');
+            txt.innerText = "Disconnected";
+            txt.style.color = "red";
+        }
     }
 
     window.onload = connect;
