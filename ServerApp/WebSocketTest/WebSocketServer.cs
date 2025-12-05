@@ -124,35 +124,37 @@ namespace WebSocketTest
 
         // --- LOGIC APP ---
         private string GetApplicationList()
-        {
-            var processes = Process.GetProcesses();
-            StringBuilder sb = new StringBuilder();
-            sb.Append("{\"type\": \"apps\", \"data\": [");
-            
-            bool isFirst = true;
-            foreach (var p in processes)
             {
-                // Lấy tiêu đề cửa sổ chính
-                string title = p.MainWindowTitle;
-                string pName = p.ProcessName;
+                var processes = Process.GetProcesses();
+                StringBuilder sb = new StringBuilder();
 
-                // --- SỬA ĐỔI: BỎ ĐOẠN ĐẶC CÁCH EXPLORER ---
-                // Chúng ta quay lại nguyên tắc: Có tiêu đề cửa sổ mới là App.
-                // Process explorer.exe (Taskbar) thường không có Title -> Sẽ bị ẩn khỏi tab Apps (Đúng ý đồ).
-                // Nếu bạn mở ổ C:\, explorer sẽ có title "Local Disk (C:)" -> Sẽ hiện (Đúng ý đồ).
-
-                if (!string.IsNullOrEmpty(title))
+                // SỬA QUAN TRỌNG: Thêm header JSON đúng chuẩn mà Web App yêu cầu
+                sb.Append("{\"type\": \"apps\", \"data\": [");
+                
+                bool isFirst = true;
+                foreach (var p in processes)
                 {
-                    if (!isFirst) sb.Append(",");
-                    
-                    string safeTitle = title.Replace("\\", "\\\\").Replace("\"", "\\\""); 
-                    sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{pName}\", \"tieu_de\": \"{safeTitle}\"}}");
-                    isFirst = false;
+                    string title = p.MainWindowTitle;
+                    string processName = p.ProcessName;
+
+                    // Chỉ lấy những Process CÓ tiêu đề cửa sổ thực sự
+                    if (!string.IsNullOrEmpty(title))
+                    {
+                        if (!isFirst) sb.Append(",");
+                        
+                        // Xử lý ký tự đặc biệt để tránh lỗi JSON
+                        string safeTitle = title
+                            .Replace("\\", "\\\\")
+                            .Replace("\"", "\\\""); 
+                        
+                        sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{processName}\", \"tieu_de\": \"{safeTitle}\"}}");
+                        isFirst = false;
+                    }
                 }
+                // Đóng JSON đúng chuẩn
+                sb.Append("]}");
+                return sb.ToString();
             }
-            sb.Append("]}");
-            return sb.ToString();
-        }
 
         private string StopAppByName(string name)
         {
