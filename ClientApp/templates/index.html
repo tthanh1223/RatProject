@@ -3,93 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAT Controller</title>
+    <title>Task Manager Remote</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f7f6; height: 100vh; display: flex; flex-direction: column; }
         
-        /* --- HEADER & TABS --- */
+        /* HEADER & TABS */
         .header { background: #2c3e50; padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center; }
         .tab-container { display: flex; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; color: #555; border-bottom: 3px solid transparent; transition: 0.3s; }
         .tab:hover { background: #f8f9fa; }
         .tab.active { border-bottom: 3px solid #007bff; color: #007bff; background: #eef7ff; }
 
-        /* --- LAYOUT --- */
+        /* MAIN CONTENT */
         .content { flex: 1; padding: 20px; overflow-y: hidden; display: flex; gap: 20px; }
-        .view-panel { flex: 3; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .toolbar { padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: center; z-index: 10; background: white; }
-        .scroll-area { flex: 1; overflow-y: auto; position: relative; }
-
-        /* --- TABLES --- */
+        
+        /* Left Panel (Tables) */
+        .view-panel { flex: 3; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+        .toolbar { padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
+        .scroll-area { flex: 1; overflow-y: auto; }
+        
         table { width: 100%; border-collapse: collapse; }
         th { position: sticky; top: 0; background: #f8f9fa; text-align: left; padding: 12px; border-bottom: 2px solid #ddd; font-size: 13px; color: #666; }
         td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 14px; }
         tr:hover { background: #f1f8ff; }
-
-        /* --- SCREEN VIEW (FIX ĐẸP HƠN) --- */
-        #view-screen { 
-            background-color: #222; /* Màu nền tối dịu hơn đen tuyền */
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100%; 
-            overflow: hidden;
-        }
-        #screen-img { 
-            max-width: 95%; 
-            max-height: 95%; 
-            border: 1px solid #555; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-            cursor: zoom-in; /* Con trỏ hình kính lúp */
-            transition: transform 0.2s;
-        }
-        #screen-img:hover { transform: scale(1.02); }
-
-        /* --- MODAL ZOOM (MỚI) --- */
-        .modal {
-            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
-            width: 100%; height: 100%; overflow: auto; 
-            background-color: rgba(0,0,0,0.9);
-            animation: fadeIn 0.3s;
-        }
-        .modal-content {
-            margin: auto; display: block; 
-            max-width: 90%; max-height: 90vh;
-            position: absolute; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%);
-            border: 2px solid white;
-            box-shadow: 0 0 20px rgba(255,255,255,0.2);
-        }
-        .close-modal {
-            position: absolute; top: 20px; right: 35px;
-            color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer;
-        }
-        .close-modal:hover { color: #bbb; }
-        @keyframes fadeIn { from {opacity: 0} to {opacity: 1} }
-
-        /* --- LOG & CHAT --- */
+        
+        /* Right Panel (Chat/Log) */
         .log-panel { flex: 1; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
         .log-header { padding: 10px; background: #eee; border-radius: 8px 8px 0 0; font-weight: bold; font-size: 13px; }
         #chat-content { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 12px; }
         .log-input { display: flex; padding: 10px; border-top: 1px solid #eee; }
 
-        /* --- BUTTONS --- */
+        /* Buttons & Inputs */
         input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
         button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: 500; }
         .btn-refresh { background: #17a2b8; }
         .btn-exec { background: #28a745; }
-        .btn-kill { background: #dc3545; padding: 4px 10px; font-size: 12px; color: white; }
+        .btn-kill { background: #dc3545; padding: 4px 10px; font-size: 12px; }
+        
+        /* Utils */
         .hidden { display: none !important; }
         .status-dot { height: 10px; width: 10px; background-color: #bbb; border-radius: 50%; display: inline-block; margin-right: 5px; }
         .online { background-color: #28a745; }
+        .mem-col { color: #666; font-size: 13px; }
     </style>
 </head>
 <body>
-
-    <div id="imgModal" class="modal">
-        <span class="close-modal" onclick="closeModal()">&times;</span>
-        <img class="modal-content" id="img01">
-    </div>
 
     <div class="header">
         <div>📡 Remote Controller</div>
@@ -97,53 +55,64 @@
     </div>
 
     <div class="tab-container">
-        <div class="tab active" onclick="switchTab('apps')">🖥️ Ứng dụng</div>
-        <div class="tab" onclick="switchTab('processes')">⚙️ Tiến trình</div>
+        <div class="tab active" onclick="switchTab('apps')">🖥️ Ứng dụng (Apps)</div>
+        <div class="tab" onclick="switchTab('processes')">⚙️ Tiến trình (Processes)</div>
         <div class="tab" onclick="switchTab('screen')">📸 Màn hình</div>
     </div>
 
     <div class="content">
         <div class="view-panel">
+            
             <div id="toolbar-apps" class="toolbar">
-                <button class="btn-refresh" onclick="sendCmd('listApps')">🔄 Refresh</button>
+                <button class="btn-refresh" onclick="sendCmd('listApps')">🔄 Làm mới</button>
                 <div style="flex:1"></div>
-                <input type="text" id="appInput" placeholder="Tên file (vd: notepad)...">
-                <button class="btn-exec" onclick="startApp()">▶ Start</button>
+                <input type="text" id="appInput" placeholder="Tên file (vd: msedge)...">
+                <button class="btn-exec" onclick="startApp()">▶ Start App</button>
             </div>
+
             <div id="toolbar-processes" class="toolbar hidden">
-                <button class="btn-refresh" onclick="sendCmd('listProcesses')">🔄 Refresh</button>
+                <button class="btn-refresh" onclick="sendCmd('listProcesses')">🔄 Refresh Process</button>
+                
                 <div style="flex:1"></div>
-                <input type="text" id="procInput" placeholder="Task name...">
-                <button class="btn-exec" onclick="startProcessTask()">▶ Run</button>
+                
+                <input type="text" id="procInput" placeholder="New Task (vd: cmd.exe)...">
+                <button class="btn-exec" onclick="startProcessTask()">▶ Run Task</button>
             </div>
             <div id="toolbar-screen" class="toolbar hidden">
                 <button class="btn-refresh" onclick="sendCmd('get_screen')">📸 Chụp ngay</button>
                 <div style="flex:1"></div>
-                <span style="color:#666; font-size:12px">Click vào ảnh để phóng to</span>
+                <span style="color:#666; font-size:13px">Ảnh được nén JPEG để truyền nhanh hơn.</span>
             </div>
-
-            <div class="scroll-area" style="height: 100%;">
+            <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 10px; background: #333;">
+                <div id="loading-screen" style="color: white; display: none;">⏳ Đang nhận dữ liệu ảnh...</div>
+                <img id="screen-img" style="max-width: 100%; max-height: 100%; border: 2px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5);" />
+            </div>
+            <div class="scroll-area">
                 <table id="table-apps">
-                    <thead><tr><th width="60">PID</th><th>Tiêu đề</th><th>File EXE</th><th width="80">Action</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th width="60">PID</th>
+                            <th>Tiêu đề cửa sổ</th>
+                            <th>Tên File</th>
+                            <th width="80">Action</th>
+                        </tr>
+                    </thead>
                     <tbody id="tbody-apps"></tbody>
                 </table>
+
                 <table id="table-processes" class="hidden">
-                    <thead><tr><th width="80">PID</th><th>Process Name</th><th>Mem (MB)</th><th width="80">Action</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th width="80">PID</th>
+                            <th>Process Name</th>
+                            <th>Memory (MB)</th>
+                            <th width="80">Action</th>
+                        </tr>
+                    </thead>
                     <tbody id="tbody-processes"></tbody>
                 </table>
-                
-                <div id="view-screen" class="hidden">
-                    <div id="loading-screen" style="color: white; display: none; position: absolute;">
-                        ⏳ Đang tải ảnh...
-                    </div>
-                    <div id="placeholder-text" style="color: #666; font-size: 18px;">
-                        Chưa có ảnh nào. Bấm "Chụp ngay".
-                    </div>
-                    <img id="screen-img" class="hidden" onclick="openModal()" />
-                </div>
             </div>
         </div>
-
         <div class="log-panel">
             <div class="log-header">System Log</div>
             <div id="chat-content"></div>
@@ -161,62 +130,46 @@
 
     function connect() {
         socket = new WebSocket(WS_URL);
-        socket.onopen = () => { updateStatus(true); refreshCurrentTab(); };
+        
+        socket.onopen = () => {
+            updateStatus(true);
+            refreshCurrentTab();
+        };
+
         socket.onmessage = (event) => {
             const data = event.data;
             try {
                 const json = JSON.parse(data);
-                if (json.type === 'apps') renderApps(json.data);
-                else if (json.type === 'processes') renderProcesses(json.data);
-                else if (json.type === 'screen_capture') {
-                    // Xử lý hiển thị ảnh
-                    document.getElementById('loading-screen').style.display = 'none';
-                    document.getElementById('placeholder-text').style.display = 'none';
-                    
-                    const img = document.getElementById('screen-img');
-                    img.src = "data:image/jpeg;base64," + json.data;
-                    img.classList.remove('hidden');
-                    
-                    // Cập nhật luôn cho modal nếu đang mở
-                    const modalImg = document.getElementById("img01");
-                    if(document.getElementById('imgModal').style.display === 'block') {
-                         modalImg.src = img.src;
-                    }
-                    
-                    log("Đã nhận ảnh chụp màn hình.");
+                
+                if (json.type === 'apps') {
+                    renderApps(json.data);
+                    log(`Đã tải ${json.data.length} ứng dụng.`);
+                }
+                else if (json.type === 'processes') {
+                    renderProcesses(json.data);
+                    log(`Đã tải ${json.data.length} tiến trình.`);
                 }
                 else if (json.trang_thai) {
+                    alert(json.thong_bao);
                     log(`[${json.trang_thai}] ${json.thong_bao}`);
-                    if(json.trang_thai === 'thanh_cong' && currentTab !== 'screen') refreshCurrentTab();
+                    if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
                 }
-            } catch (e) { log("Server: " + data); }
+                else if (json.type === 'screen_capture') {
+                    document.getElementById('loading-screen').style.display = 'none';
+                    const img = document.getElementById('screen-img');
+                    // Gán Base64 vào src của thẻ img
+                    img.src = "data:image/jpeg;base64," + json.data;
+                    log("Đã nhận ảnh chụp màn hình.");
+                }
+            } catch (e) {
+                log("Server: " + data);
+            }
         };
-        socket.onclose = () => { updateStatus(false); setTimeout(connect, 3000); };
-    }
 
-    // --- ZOOM MODAL FUNCTIONS ---
-    function openModal() {
-        const modal = document.getElementById("imgModal");
-        const img = document.getElementById("screen-img");
-        const modalImg = document.getElementById("img01");
-        
-        // Không mở nếu chưa có ảnh
-        if(img.src.length < 100) return; 
-
-        modal.style.display = "block";
-        modalImg.src = img.src;
-    }
-
-    function closeModal() {
-        document.getElementById("imgModal").style.display = "none";
-    }
-    
-    // Đóng modal khi click ra ngoài ảnh
-    window.onclick = function(event) {
-        const modal = document.getElementById("imgModal");
-        if (event.target == modal) {
-            modal.style.display = "none";
-        }
+        socket.onclose = () => {
+            updateStatus(false);
+            setTimeout(connect, 3000);
+        };
     }
 
     // --- TAB LOGIC ---
@@ -224,82 +177,164 @@
         currentTab = tab;
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         event.target.classList.add('active');
-        
-        ['apps', 'processes', 'screen'].forEach(t => {
-            document.getElementById(`toolbar-${t}`).classList.toggle('hidden', t !== tab);
-            
-            // Xử lý riêng cho view-screen để fix layout flex
-            const view = document.getElementById(t === 'screen' ? `view-${t}` : `table-${t}`);
-            
-            if (t === 'screen' && tab === 'screen') {
-                view.classList.remove('hidden');
-                // View screen dùng flex, không phải block
-                view.style.display = 'flex'; 
-            } else if (t === 'screen' && tab !== 'screen') {
-                view.classList.add('hidden');
-                view.style.display = 'none';
-            } else {
-                view.classList.toggle('hidden', t !== tab);
-            }
-        });
-        
-        if(tab !== 'screen') refreshCurrentTab();
-    }
 
+        // Ẩn tất cả trước
+        document.getElementById('toolbar-apps').classList.add('hidden');
+        document.getElementById('table-apps').classList.add('hidden');
+        document.getElementById('toolbar-processes').classList.add('hidden');
+        document.getElementById('table-processes').classList.add('hidden');
+        document.getElementById('toolbar-screen').classList.add('hidden');
+        document.getElementById('view-screen').classList.add('hidden');
+
+        // Hiện tab tương ứng
+        if (tab === 'apps') {
+            document.getElementById('toolbar-apps').classList.remove('hidden');
+            document.getElementById('table-apps').classList.remove('hidden');
+        } else if (tab === 'processes') {
+            document.getElementById('toolbar-processes').classList.remove('hidden');
+            document.getElementById('table-processes').classList.remove('hidden');
+        } else if (tab === 'screen') {
+            document.getElementById('toolbar-screen').classList.remove('hidden');
+            document.getElementById('view-screen').classList.remove('hidden');
+        }
+        
+        // Không auto-refresh tab screen để tiết kiệm băng thông
+        if (tab !== 'screen') refreshCurrentTab();
+    }
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+
+    // Ẩn tất cả trước
+    document.getElementById('toolbar-apps').classList.add('hidden');
+    document.getElementById('table-apps').classList.add('hidden');
+    document.getElementById('toolbar-processes').classList.add('hidden');
+    document.getElementById('table-processes').classList.add('hidden');
+    document.getElementById('toolbar-screen').classList.add('hidden');
+    document.getElementById('view-screen').classList.add('hidden');
+
+    // Hiện tab tương ứng
+    if (tab === 'apps') {
+        document.getElementById('toolbar-apps').classList.remove('hidden');
+        document.getElementById('table-apps').classList.remove('hidden');
+    } else if (tab === 'processes') {
+        document.getElementById('toolbar-processes').classList.remove('hidden');
+        document.getElementById('table-processes').classList.remove('hidden');
+    } else if (tab === 'screen') {
+        document.getElementById('toolbar-screen').classList.remove('hidden');
+        document.getElementById('view-screen').classList.remove('hidden');
+    }
+    
+    // Không auto-refresh tab screen để tiết kiệm băng thông
+    if (tab !== 'screen') refreshCurrentTab();
+}
     function refreshCurrentTab() {
         if (!socket || socket.readyState !== 1) return;
         if (currentTab === 'apps') sendCmd('listApps');
-        else if (currentTab === 'processes') sendCmd('listProcesses');
+        else sendCmd('listProcesses');
     }
 
+    // --- RENDER FUNCTIONS ---
     function renderApps(list) {
         const tbody = document.getElementById('tbody-apps');
-        tbody.innerHTML = list.map(app => `
-            <tr><td>${app.pid}</td><td style="color:#007bff">${app.tieu_de}</td><td>${app.ten}.exe</td>
-            <td><button class="btn-kill" onclick="stopApp('${app.ten}')">Close</button></td></tr>`).join('');
+        tbody.innerHTML = '';
+        list.forEach(app => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${app.pid}</td>
+                    <td style="color:#007bff; font-weight:500">${app.tieu_de}</td>
+                    <td>${app.ten}.exe</td>
+                    <td><button class="btn-kill" onclick="stopApp('${app.ten}')">Close</button></td>
+                </tr>
+            `;
+        });
     }
 
     function renderProcesses(list) {
         const tbody = document.getElementById('tbody-processes');
-        tbody.innerHTML = list.map(proc => `
-            <tr><td>${proc.pid}</td><td><b>${proc.ten}</b></td><td>${proc.mem}</td>
-            <td><button class="btn-kill" style="background:#343a40" onclick="killProcess(${proc.pid})">Kill</button></td></tr>`).join('');
+        tbody.innerHTML = '';
+        list.forEach(proc => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${proc.pid}</td>
+                    <td><b>${proc.ten}</b></td>
+                    <td class="mem-col">${proc.mem} MB</td>
+                    <td><button class="btn-kill" style="background:#343a40" onclick="killProcess(${proc.pid})">Kill</button></td>
+                </tr>
+            `;
+        });
     }
 
-    function sendCmd(cmd) { 
+    // --- ACTIONS ---
+    function sendCmd(cmd) {
         if(socket && socket.readyState === 1) {
             socket.send(cmd);
-            if(cmd === 'get_screen') {
+            if (cmd === 'get_screen') {
                 document.getElementById('loading-screen').style.display = 'block';
-                document.getElementById('placeholder-text').style.display = 'none';
             }
         }
     }
-    
-    function startApp() { const n = document.getElementById('appInput').value; if(n) sendCmd(`startApp ${n}`); }
-    function stopApp(n) { if(confirm(`Đóng '${n}'?`)) sendCmd(`stopApp ${n}`); }
-    function startProcessTask() { const n = document.getElementById('procInput').value; if(n) sendCmd(`startApp ${n}`); }
-    function killProcess(pid) { if(confirm(`Kill PID ${pid}?`)) sendCmd(`killProcess ${pid}`); }
-    
-    function sendChat() { 
-        const v = document.getElementById('chatInput').value; 
-        if(v) { socket.send(v); log("Me: " + v); document.getElementById('chatInput').value = ''; } 
+
+    // Tab App Actions
+    function startApp() {
+        const name = document.getElementById('appInput').value;
+        if(name) sendCmd(`startApp ${name}`);
     }
-    
-    function log(msg) { 
-        const d = document.createElement('div'); d.style.borderBottom="1px solid #eee"; d.innerText = msg;
-        document.getElementById('chat-content').prepend(d); 
+    function stopApp(name) {
+        if(confirm(`Đóng cửa sổ ứng dụng '${name}'?`)) sendCmd(`stopApp ${name}`);
     }
-    
-    function updateStatus(ok) {
+
+    // Tab Process Actions (MỚI THÊM HÀM START TASK)
+    function startProcessTask() {
+        const name = document.getElementById('procInput').value;
+        if(name) {
+            // Tái sử dụng lệnh startApp của server vì bản chất đều là Process.Start()
+            sendCmd(`startApp ${name}`);
+        } else {
+            alert("Vui lòng nhập tên chương trình/đường dẫn!");
+        }
+    }
+
+    function killProcess(pid) {
+        if(confirm(`CẢNH BÁO: Bạn muốn buộc dừng Process ID ${pid}?`)) {
+            sendCmd(`killProcess ${pid}`);
+        }
+    }
+
+    function sendChat() {
+        const val = document.getElementById('chatInput').value;
+        if(val) {
+            socket.send(val);
+            log("Me: " + val);
+            document.getElementById('chatInput').value = '';
+        }
+    }
+
+    function log(msg) {
+        const div = document.createElement('div');
+        div.style.marginBottom = "5px";
+        div.style.borderBottom = "1px solid #eee";
+        div.innerText = msg;
+        document.getElementById('chat-content').prepend(div);
+    }
+
+    function updateStatus(isOnline) {
         const dot = document.getElementById('status-dot');
         const txt = document.getElementById('status-text');
-        dot.className = ok ? "status-dot online" : "status-dot";
-        txt.innerText = ok ? "Connected" : "Disconnected";
-        txt.style.color = ok ? "green" : "red";
+        if(isOnline) {
+            dot.classList.add('online');
+            txt.innerText = "Connected";
+            txt.style.color = "green";
+        } else {
+            dot.classList.remove('online');
+            txt.innerText = "Disconnected";
+            txt.style.color = "red";
+        }
     }
 
     window.onload = connect;
 </script>
+
 </body>
 </html>
