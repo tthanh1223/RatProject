@@ -32,15 +32,8 @@ namespace WebSocketTest
                 while (_listener.IsListening)
                 {
                     var context = await _listener.GetContextAsync();
-                    if (context.Request.IsWebSocketRequest)
-                    {
-                        _ = ProcessClient(context);
-                    }
-                    else
-                    {
-                        context.Response.StatusCode = 400;
-                        context.Response.Close();
-                    }
+                    if (context.Request.IsWebSocketRequest) _ = ProcessClient(context);
+                    else { context.Response.StatusCode = 400; context.Response.Close(); }
                 }
             }
             catch (Exception ex) { _logger("Lỗi Server: " + ex.Message); }
@@ -51,34 +44,22 @@ namespace WebSocketTest
             var wsContext = await context.AcceptWebSocketAsync(null);
             _currentSocket = wsContext.WebSocket;
             _logger("Client đã kết nối!");
-            await SendToClient("{\"trang_thai\": \"info\", \"thong_bao\": \"Server Ready\"}");
+            await SendToClient(JsonInfo("Server Ready"));
 
-            byte[] buffer = new byte[1024 * 64]; // Tăng buffer lên để chứa danh sách App dài
+            byte[] buffer = new byte[1024 * 500]; // Tăng buffer lớn vì list process rất dài
 
             try
             {
                 while (_currentSocket.State == WebSocketState.Open)
                 {
                     var result = await _currentSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    if (result.MessageType == WebSocketMessageType.Close) break;
 
-                    if (result.MessageType == WebSocketMessageType.Close)
-                    {
-                        await _currentSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
-                        _logger("Client ngắt kết nối.");
-                    }
-                    else
-                    {
-                        string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                        
-                        // Log theo yêu cầu
-                        _logger($"[Client]: {message}");
+                    string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    _logger($"[Client]: {message}");
 
-                        // Xử lý lệnh
-                        string response = HandleCommand(message);
-                        
-                        // Gửi phản hồi
-                        await SendToClient(response);
-                    }
+                    string response = HandleCommand(message);
+                    await SendToClient(response);
                 }
             }
             catch (Exception ex) { _logger("Lỗi kết nối: " + ex.Message); }
@@ -94,10 +75,10 @@ namespace WebSocketTest
             }
         }
 
-        // --- KHU VỰC XỬ LÝ LỆNH ---
+        // --- XỬ LÝ LỆNH ---
         private string HandleCommand(string command)
         {
-            string[] parts = command.Split(new char[] { ' ' }, 2); // Tách lệnh và tham số
+            string[] parts = command.Split(new char[] { ' ' }, 2);
             string cmd = parts[0].Trim();
             string arg = parts.Length > 1 ? parts[1].Trim() : "";
 
@@ -105,122 +86,108 @@ namespace WebSocketTest
             {
                 switch (cmd)
                 {
-                    case "listProcesses":
-                        return GetProcessList();
+                    // === NHÓM APP (Thao tác theo Tên) ===
                     case "listApps":
                         return GetApplicationList();
-
-                    case "stopApp":
-                        if (string.IsNullOrEmpty(arg)) return JsonError("Chưa nhập tên App");
-                        return StopProcess(arg);
-
+                    case "stopApp": // Dừng App theo tên (Graceful close nếu có thể)
+                        return StopAppByName(arg);
                     case "startApp":
-                        if (string.IsNullOrEmpty(arg)) return JsonError("Chưa nhập đường dẫn/tên App");
-                        return StartProcess(arg);
+                        return StartApp(arg);
+
+                    // === NHÓM PROCESS (Thao tác theo PID - Mới) ===
+                    case "listProcesses":
+                        return GetFullProcessList();
+                    case "killProcess": // Diệt Process theo ID (Force kill)
+                        if (int.TryParse(arg, out int pid)) return KillProcessByPid(pid);
+                        return JsonError("PID phải là số");
 
                     default:
-                        // Nếu không phải lệnh, coi như chat bình thường -> Trả về nguyên văn hoặc PONG
                         if (cmd == "PING") return "PONG";
-                        return command; // Echo lại tin nhắn chat
+                        return command;
                 }
             }
-            catch (Exception ex)
-            {
-                return JsonError("Lỗi Server: " + ex.Message);
-            }
+            catch (Exception ex) { return JsonError("Lỗi Server: " + ex.Message); }
         }
 
-        // 1. Lệnh listApps
+        // --- LOGIC APP ---
         private string GetApplicationList()
         {
             var processes = Process.GetProcesses();
             StringBuilder sb = new StringBuilder();
-            sb.Append("[");
+            sb.Append("{\"type\": \"apps\", \"data\": [");
             
             bool isFirst = true;
             foreach (var p in processes)
             {
                 string title = p.MainWindowTitle;
-                string processName = p.ProcessName;
+                string pName = p.ProcessName;
+                if (pName.ToLower() == "explorer" && string.IsNullOrEmpty(title)) title = "Windows Explorer";
 
-                // --- FIX BUG EXPLORER ---
-                // Nếu là explorer, dù không có title vẫn lấy, và đặt tên hiển thị thủ công
-                if (processName.ToLower() == "explorer")
-                {
-                    // Windows Explorer thường có MainWindowHandle != 0 nhưng Title có thể rỗng
-                    if (string.IsNullOrEmpty(title))
-                    {
-                        title = "Windows Explorer (Shell/Folder)";
-                    }
-                }
-
-                // --- ĐIỀU KIỆN LỌC ---
-                // Chỉ lấy process có Tiêu đề cửa sổ (hoặc là explorer đã được fix ở trên)
                 if (!string.IsNullOrEmpty(title))
                 {
                     if (!isFirst) sb.Append(",");
-                    
-                    // Xử lý Escape ký tự đặc biệt cho JSON
-                    string safeTitle = title
-                        .Replace("\\", "\\\\")
-                        .Replace("\"", "\\\""); 
-                    
-                    sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{processName}\", \"tieu_de\": \"{safeTitle}\"}}");
+                    string safeTitle = title.Replace("\\", "\\\\").Replace("\"", "\\\"");
+                    sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{pName}\", \"tieu_de\": \"{safeTitle}\"}}");
                     isFirst = false;
                 }
             }
-            sb.Append("]");
+            sb.Append("]}");
             return sb.ToString();
         }
-        // Lệnh list process
-        private string GetProcessList()
+
+        private string StopAppByName(string name)
         {
-            var processes = Process.GetProcesses();
-            StringBuilder sb = new StringBuilder();
-            sb.Append("[");
+            if (string.IsNullOrEmpty(name)) return JsonError("Thiếu tên App");
+            var procs = Process.GetProcessesByName(name);
+            if (procs.Length == 0) return JsonError("Không tìm thấy App: " + name);
             
-            for (int i = 0; i < processes.Length; i++)
-            {
-                // Chỉ lấy process có tên, lọc bớt process hệ thống nếu cần
-                sb.Append($"{{\"pid\": {processes[i].Id}, \"ten\": \"{processes[i].ProcessName}\"}}");
-                if (i < processes.Length - 1) sb.Append(",");
-            }
-            sb.Append("]");
-            return sb.ToString();
+            foreach (var p in procs) { try { p.Kill(); } catch { } }
+            return JsonSuccess($"Đã đóng {procs.Length} cửa sổ '{name}'");
         }
 
-        // 2. Lệnh stopApp
-        private string StopProcess(string name)
+        private string StartApp(string path)
         {
-            // Bỏ đuôi .exe nếu người dùng lỡ nhập
-            if (name.EndsWith(".exe")) name = name.Substring(0, name.Length - 4);
-
-            var processes = Process.GetProcessesByName(name);
-            if (processes.Length == 0) return JsonError("Không tìm thấy ứng dụng: " + name);
-
-            foreach (var p in processes)
-            {
-                try { p.Kill(); } catch { /* Bỏ qua nếu không quyền kill */ }
-            }
-            return JsonSuccess($"Đã dừng {processes.Length} tiến trình tên '{name}'");
-        }
-
-        // 3. Lệnh startApp
-        private string StartProcess(string path)
-        {
+            if (string.IsNullOrEmpty(path)) return JsonError("Thiếu tên/đường dẫn");
             Process.Start(path);
             return JsonSuccess("Đã khởi động: " + path);
         }
 
-        // Helper tạo JSON phản hồi nhanh
-        private string JsonSuccess(string msg)
+        // --- LOGIC PROCESS (MỚI) ---
+        private string GetFullProcessList()
         {
-            return $"{{\"trang_thai\": \"thanh_cong\", \"thong_bao\": \"{msg}\"}}";
+            var processes = Process.GetProcesses();
+            StringBuilder sb = new StringBuilder();
+            // Thêm định danh type: processes để Client phân biệt
+            sb.Append("{\"type\": \"processes\", \"data\": [");
+            
+            for (int i = 0; i < processes.Length; i++)
+            {
+                var p = processes[i];
+                long mem = 0;
+                try { mem = p.WorkingSet64 / 1024 / 1024; } catch { } // MB
+
+                sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{p.ProcessName}\", \"mem\": {mem}}}");
+                if (i < processes.Length - 1) sb.Append(",");
+            }
+            sb.Append("]}");
+            return sb.ToString();
         }
 
-        private string JsonError(string msg)
+        private string KillProcessByPid(int pid)
         {
-            return $"{{\"trang_thai\": \"loi\", \"thong_bao\": \"{msg}\"}}";
+            try
+            {
+                var p = Process.GetProcessById(pid);
+                p.Kill();
+                return JsonSuccess($"Đã diệt Process ID {pid} ({p.ProcessName})");
+            }
+            catch (ArgumentException) { return JsonError($"Không tồn tại Process ID {pid}"); }
+            catch (Exception ex) { return JsonError("Không thể diệt: " + ex.Message); }
         }
+
+        // Helpers
+        private string JsonSuccess(string msg) => $"{{\"trang_thai\": \"thanh_cong\", \"thong_bao\": \"{msg}\"}}";
+        private string JsonError(string msg) => $"{{\"trang_thai\": \"loi\", \"thong_bao\": \"{msg}\"}}";
+        private string JsonInfo(string msg) => $"{{\"trang_thai\": \"info\", \"thong_bao\": \"{msg}\"}}";
     }
 }
