@@ -57,6 +57,7 @@
     <div class="tab-container">
         <div class="tab active" onclick="switchTab('apps')">🖥️ Ứng dụng (Apps)</div>
         <div class="tab" onclick="switchTab('processes')">⚙️ Tiến trình (Processes)</div>
+        <div class="tab" onclick="switchTab('screen')">📸 Màn hình</div>
     </div>
 
     <div class="content">
@@ -112,7 +113,6 @@
                 </table>
             </div>
         </div>
-        <div class="tab" onclick="switchTab('screen')">📸 Màn hình</div>
         <div class="log-panel">
             <div class="log-header">System Log</div>
             <div id="chat-content"></div>
@@ -154,6 +154,13 @@
                     log(`[${json.trang_thai}] ${json.thong_bao}`);
                     if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
                 }
+                else if (json.type === 'screen_capture') {
+                    document.getElementById('loading-screen').style.display = 'none';
+                    const img = document.getElementById('screen-img');
+                    // Gán Base64 vào src của thẻ img
+                    img.src = "data:image/jpeg;base64," + json.data;
+                    log("Đã nhận ảnh chụp màn hình.");
+                }
             } catch (e) {
                 log("Server: " + data);
             }
@@ -171,20 +178,57 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         event.target.classList.add('active');
 
+        // Ẩn tất cả trước
+        document.getElementById('toolbar-apps').classList.add('hidden');
+        document.getElementById('table-apps').classList.add('hidden');
+        document.getElementById('toolbar-processes').classList.add('hidden');
+        document.getElementById('table-processes').classList.add('hidden');
+        document.getElementById('toolbar-screen').classList.add('hidden');
+        document.getElementById('view-screen').classList.add('hidden');
+
+        // Hiện tab tương ứng
         if (tab === 'apps') {
             document.getElementById('toolbar-apps').classList.remove('hidden');
             document.getElementById('table-apps').classList.remove('hidden');
-            document.getElementById('toolbar-processes').classList.add('hidden');
-            document.getElementById('table-processes').classList.add('hidden');
-        } else {
-            document.getElementById('toolbar-apps').classList.add('hidden');
-            document.getElementById('table-apps').classList.add('hidden');
+        } else if (tab === 'processes') {
             document.getElementById('toolbar-processes').classList.remove('hidden');
             document.getElementById('table-processes').classList.remove('hidden');
+        } else if (tab === 'screen') {
+            document.getElementById('toolbar-screen').classList.remove('hidden');
+            document.getElementById('view-screen').classList.remove('hidden');
         }
-        refreshCurrentTab();
+        
+        // Không auto-refresh tab screen để tiết kiệm băng thông
+        if (tab !== 'screen') refreshCurrentTab();
     }
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
 
+    // Ẩn tất cả trước
+    document.getElementById('toolbar-apps').classList.add('hidden');
+    document.getElementById('table-apps').classList.add('hidden');
+    document.getElementById('toolbar-processes').classList.add('hidden');
+    document.getElementById('table-processes').classList.add('hidden');
+    document.getElementById('toolbar-screen').classList.add('hidden');
+    document.getElementById('view-screen').classList.add('hidden');
+
+    // Hiện tab tương ứng
+    if (tab === 'apps') {
+        document.getElementById('toolbar-apps').classList.remove('hidden');
+        document.getElementById('table-apps').classList.remove('hidden');
+    } else if (tab === 'processes') {
+        document.getElementById('toolbar-processes').classList.remove('hidden');
+        document.getElementById('table-processes').classList.remove('hidden');
+    } else if (tab === 'screen') {
+        document.getElementById('toolbar-screen').classList.remove('hidden');
+        document.getElementById('view-screen').classList.remove('hidden');
+    }
+    
+    // Không auto-refresh tab screen để tiết kiệm băng thông
+    if (tab !== 'screen') refreshCurrentTab();
+}
     function refreshCurrentTab() {
         if (!socket || socket.readyState !== 1) return;
         if (currentTab === 'apps') sendCmd('listApps');
@@ -224,7 +268,12 @@
 
     // --- ACTIONS ---
     function sendCmd(cmd) {
-        if(socket && socket.readyState === 1) socket.send(cmd);
+        if(socket && socket.readyState === 1) {
+            socket.send(cmd);
+            if (cmd === 'get_screen') {
+                document.getElementById('loading-screen').style.display = 'block';
+            }
+        }
     }
 
     // Tab App Actions
