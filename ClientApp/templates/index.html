@@ -51,16 +51,16 @@
 
         <h3>Danh sách ứng dụng đang chạy (<span id="appCount">0</span>)</h3>
         <table id="appTable">
-            <thead>
-                <tr>
-                    <th width="100">PID</th>
-                    <th>Tên ứng dụng</th>
-                    <th width="100">Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                </tbody>
-        </table>
+        <thead>
+            <tr>
+                <th width="80">PID</th>
+                <th>Tiêu đề cửa sổ (Window Title)</th> <th width="150">Tên File (EXE)</th>
+                <th width="100">Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
     </div>
 
     <div class="side-panel">
@@ -119,23 +119,26 @@
     // --- CÁC HÀM XỬ LÝ GIAO DIỆN ---
 
     function renderTable(apps) {
-        tableBody.innerHTML = "";
-        document.getElementById("appCount").textContent = apps.length;
+    tableBody.innerHTML = "";
+    document.getElementById("appCount").textContent = apps.length;
 
-        apps.forEach(app => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${app.pid}</td>
-                <td onclick="selectApp('${app.ten}')"><b>${app.ten}</b></td>
-                <td><button class="btn-stop" style="padding:2px 8px; font-size:10px" onclick="quickStop('${app.ten}')">Kill</button></td>
-            `;
-            tableBody.appendChild(row);
-        });
-    }
-
-    function selectApp(name) {
-        document.getElementById("appName").value = name;
-    }
+    apps.forEach(app => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${app.pid}</td>
+            <td style="color:#0056b3; font-weight:500">${app.tieu_de}</td>
+            <td onclick="selectApp('${app.ten}')" style="cursor:pointer; color:#dc3545">
+                ${app.ten}.exe
+            </td>
+            <td>
+                <button class="btn-stop" style="padding:4px 8px; font-size:11px" onclick="quickStop('${app.ten}')">
+                    Đóng
+                </button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
 
     // --- CÁC HÀM GỬI LỆNH ---
 
