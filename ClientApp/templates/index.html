@@ -67,7 +67,10 @@
     </style>
 </head>
 <body>
-
+    <div id="imgModal" class="modal">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="img01">
+    </div>
     <div class="header">
         <div>📡 Remote Controller</div>
         <div style="font-size: 14px;"><span id="status-dot" class="status-dot"></span><span id="status-text">Disconnected</span></div>
@@ -104,8 +107,7 @@
             </div>
             <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 10px; background: #333;">
                 <div id="loading-screen" style="color: white; display: none;">⏳ Đang nhận dữ liệu ảnh...</div>
-                <img id="screen-img" style="max-width: 100%; max-height: 100%; border: 2px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5);" />
-            </div>
+                <img id="screen-img" class="hidden" onclick="openModal()" />            </div>
             <div class="scroll-area">
                 <table id="table-apps">
                     <thead>
@@ -351,7 +353,38 @@ function switchTab(tab) {
             txt.style.color = "red";
         }
     }
+    // --- LOGIC MODAL ZOOM ---
+    function openModal() {
+        const modal = document.getElementById("imgModal");
+        const sourceImg = document.getElementById("screen-img");
+        const modalImg = document.getElementById("img01");
+        
+        // Chỉ mở khi đã có ảnh
+        if (sourceImg.src && sourceImg.src.startsWith("data:image")) {
+            modal.style.display = "block";
+            modalImg.src = sourceImg.src;
+        }
+    }
 
+    function closeModal() {
+        document.getElementById("imgModal").style.display = "none";
+    }
+
+    // Đóng modal khi click ra vùng đen bên ngoài
+    window.onclick = function(event) {
+        const modal = document.getElementById("imgModal");
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    // Cập nhật lại logic nhận ảnh (để nếu đang mở modal thì cập nhật luôn ảnh trong modal)
+    // Bạn tìm trong đoạn socket.onmessage, chỗ xử lý 'screen_capture', thêm dòng này:
+    /* const modalImg = document.getElementById("img01");
+    if(document.getElementById('imgModal').style.display === 'block') {
+            modalImg.src = "data:image/jpeg;base64," + json.data;
+    }
+    */
     window.onload = connect;
 </script>
 
