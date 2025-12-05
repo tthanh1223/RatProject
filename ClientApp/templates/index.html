@@ -70,9 +70,12 @@
             </div>
 
             <div id="toolbar-processes" class="toolbar hidden">
-                <button class="btn-refresh" onclick="sendCmd('listProcesses')">🔄 Làm mới Process</button>
+                <button class="btn-refresh" onclick="sendCmd('listProcesses')">🔄 Refresh Process</button>
+                
                 <div style="flex:1"></div>
-                <span style="color: #666; font-size: 13px;">Kill bằng PID an toàn hơn tên.</span>
+                
+                <input type="text" id="procInput" placeholder="New Task (vd: cmd.exe)...">
+                <button class="btn-exec" onclick="startProcessTask()">▶ Run Task</button>
             </div>
 
             <div class="scroll-area">
@@ -128,27 +131,22 @@
         socket.onmessage = (event) => {
             const data = event.data;
             try {
-                // Parse JSON từ Server
                 const json = JSON.parse(data);
                 
-                // 1. Nếu là dữ liệu danh sách Apps
                 if (json.type === 'apps') {
                     renderApps(json.data);
                     log(`Đã tải ${json.data.length} ứng dụng.`);
                 }
-                // 2. Nếu là dữ liệu danh sách Processes
                 else if (json.type === 'processes') {
                     renderProcesses(json.data);
                     log(`Đã tải ${json.data.length} tiến trình.`);
                 }
-                // 3. Thông báo trạng thái (Success/Error)
                 else if (json.trang_thai) {
                     alert(json.thong_bao);
                     log(`[${json.trang_thai}] ${json.thong_bao}`);
                     if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
                 }
             } catch (e) {
-                // Chat message
                 log("Server: " + data);
             }
         };
@@ -162,8 +160,6 @@
     // --- TAB LOGIC ---
     function switchTab(tab) {
         currentTab = tab;
-        
-        // UI Toggles
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         event.target.classList.add('active');
 
@@ -178,7 +174,6 @@
             document.getElementById('toolbar-processes').classList.remove('hidden');
             document.getElementById('table-processes').classList.remove('hidden');
         }
-
         refreshCurrentTab();
     }
 
@@ -224,7 +219,7 @@
         if(socket && socket.readyState === 1) socket.send(cmd);
     }
 
-    // App Actions (Theo Tên)
+    // Tab App Actions
     function startApp() {
         const name = document.getElementById('appInput').value;
         if(name) sendCmd(`startApp ${name}`);
@@ -233,7 +228,17 @@
         if(confirm(`Đóng cửa sổ ứng dụng '${name}'?`)) sendCmd(`stopApp ${name}`);
     }
 
-    // Process Actions (Theo PID)
+    // Tab Process Actions (MỚI THÊM HÀM START TASK)
+    function startProcessTask() {
+        const name = document.getElementById('procInput').value;
+        if(name) {
+            // Tái sử dụng lệnh startApp của server vì bản chất đều là Process.Start()
+            sendCmd(`startApp ${name}`);
+        } else {
+            alert("Vui lòng nhập tên chương trình/đường dẫn!");
+        }
+    }
+
     function killProcess(pid) {
         if(confirm(`CẢNH BÁO: Bạn muốn buộc dừng Process ID ${pid}?`)) {
             sendCmd(`killProcess ${pid}`);
@@ -249,7 +254,6 @@
         }
     }
 
-    // --- UTILS ---
     function log(msg) {
         const div = document.createElement('div');
         div.style.marginBottom = "5px";
