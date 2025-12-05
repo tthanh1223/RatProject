@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace WebSocketTest
 {
@@ -11,8 +13,6 @@ namespace WebSocketTest
     {
         private HttpListener? _listener;
         private Action<string> _logger;
-        
-        // BIẾN QUAN TRỌNG: Lưu trữ client đang kết nối để gửi tin bất cứ lúc nào
         private WebSocket? _currentSocket;
 
         public SimpleWebSocketServer(Action<string> loggerMethod)
@@ -26,7 +26,6 @@ namespace WebSocketTest
             _listener.Prefixes.Add(url);
             _listener.Start();
             _logger($"Server đã khởi động tại: {url}");
-            _logger("Đang chờ client kết nối...");
 
             try
             {
@@ -35,7 +34,6 @@ namespace WebSocketTest
                     var context = await _listener.GetContextAsync();
                     if (context.Request.IsWebSocketRequest)
                     {
-                        // Không dùng await ở đây để không chặn vòng lặp chính
                         _ = ProcessClient(context);
                     }
                     else
@@ -45,84 +43,140 @@ namespace WebSocketTest
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                _logger("Lỗi Listener: " + ex.Message);
-            }
+            catch (Exception ex) { _logger("Lỗi Server: " + ex.Message); }
         }
 
         private async Task ProcessClient(HttpListenerContext context)
         {
+            var wsContext = await context.AcceptWebSocketAsync(null);
+            _currentSocket = wsContext.WebSocket;
+            _logger("Client đã kết nối!");
+            await SendToClient("{\"trang_thai\": \"info\", \"thong_bao\": \"Server Ready\"}");
+
+            byte[] buffer = new byte[1024 * 64]; // Tăng buffer lên để chứa danh sách App dài
+
             try
             {
-                var wsContext = await context.AcceptWebSocketAsync(null);
-                _currentSocket = wsContext.WebSocket; // LƯU KẾT NỐI LẠI
-
-                _logger("Client đã kết nối thành công!");
-                await SendToClient("SERVER READY"); // Gửi lời chào chủ động
-
-                byte[] buffer = new byte[1024 * 4];
-
                 while (_currentSocket.State == WebSocketState.Open)
                 {
                     var result = await _currentSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        await _currentSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed by Server", CancellationToken.None);
-                        _logger("Client đã ngắt kết nối.");
+                        await _currentSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
+                        _logger("Client ngắt kết nối.");
                     }
                     else
                     {
                         string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                        
+                        // Log theo yêu cầu
                         _logger($"[Client]: {message}");
 
-                        // Auto-reply PING/PONG (Logic cũ)
-                        if (message == "PING")
-                        {
-                            await SendToClient("PONG");
-                        }
+                        // Xử lý lệnh
+                        string response = HandleCommand(message);
+                        
+                        // Gửi phản hồi
+                        await SendToClient(response);
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                _logger("Client mất kết nối đột ngột: " + ex.Message);
-            }
-            finally
-            {
-                // Khi vòng lặp kết thúc, hủy biến lưu trữ
-                _currentSocket = null;
-            }
+            catch (Exception ex) { _logger("Lỗi kết nối: " + ex.Message); }
+            finally { _currentSocket = null; }
         }
 
-        // --- TÍNH NĂNG MỚI: Gửi tin nhắn chủ động từ Server ---
         public async Task SendToClient(string msg)
         {
             if (_currentSocket != null && _currentSocket.State == WebSocketState.Open)
             {
-                try
-                {
-                    byte[] bytes = Encoding.UTF8.GetBytes(msg);
-                    await _currentSocket.SendAsync(
-                        new ArraySegment<byte>(bytes), 
-                        WebSocketMessageType.Text, 
-                        true, 
-                        CancellationToken.None
-                    );
-                    
-                    // Log ra để biết Server đã gửi gì (trừ PONG cho đỡ spam log)
-                    if(msg != "PONG") _logger($"[Server]: {msg}");
-                }
-                catch (Exception ex)
-                {
-                    _logger("Lỗi khi gửi tin: " + ex.Message);
-                }
+                byte[] bytes = Encoding.UTF8.GetBytes(msg);
+                await _currentSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
             }
-            else
+        }
+
+        // --- KHU VỰC XỬ LÝ LỆNH ---
+        private string HandleCommand(string command)
+        {
+            string[] parts = command.Split(new char[] { ' ' }, 2); // Tách lệnh và tham số
+            string cmd = parts[0].Trim();
+            string arg = parts.Length > 1 ? parts[1].Trim() : "";
+
+            try
             {
-                _logger("⚠️ Không thể gửi: Chưa có Client kết nối!");
+                switch (cmd)
+                {
+                    case "listApps":
+                        return GetProcessList();
+
+                    case "stopApp":
+                        if (string.IsNullOrEmpty(arg)) return JsonError("Chưa nhập tên App");
+                        return StopProcess(arg);
+
+                    case "startApp":
+                        if (string.IsNullOrEmpty(arg)) return JsonError("Chưa nhập đường dẫn/tên App");
+                        return StartProcess(arg);
+
+                    default:
+                        // Nếu không phải lệnh, coi như chat bình thường -> Trả về nguyên văn hoặc PONG
+                        if (cmd == "PING") return "PONG";
+                        return command; // Echo lại tin nhắn chat
+                }
             }
+            catch (Exception ex)
+            {
+                return JsonError("Lỗi Server: " + ex.Message);
+            }
+        }
+
+        // 1. Lệnh listApps
+        private string GetProcessList()
+        {
+            var processes = Process.GetProcesses();
+            StringBuilder sb = new StringBuilder();
+            sb.Append("[");
+            
+            for (int i = 0; i < processes.Length; i++)
+            {
+                // Chỉ lấy process có tên, lọc bớt process hệ thống nếu cần
+                sb.Append($"{{\"pid\": {processes[i].Id}, \"ten\": \"{processes[i].ProcessName}\"}}");
+                if (i < processes.Length - 1) sb.Append(",");
+            }
+            sb.Append("]");
+            return sb.ToString();
+        }
+
+        // 2. Lệnh stopApp
+        private string StopProcess(string name)
+        {
+            // Bỏ đuôi .exe nếu người dùng lỡ nhập
+            if (name.EndsWith(".exe")) name = name.Substring(0, name.Length - 4);
+
+            var processes = Process.GetProcessesByName(name);
+            if (processes.Length == 0) return JsonError("Không tìm thấy ứng dụng: " + name);
+
+            foreach (var p in processes)
+            {
+                try { p.Kill(); } catch { /* Bỏ qua nếu không quyền kill */ }
+            }
+            return JsonSuccess($"Đã dừng {processes.Length} tiến trình tên '{name}'");
+        }
+
+        // 3. Lệnh startApp
+        private string StartProcess(string path)
+        {
+            Process.Start(path);
+            return JsonSuccess("Đã khởi động: " + path);
+        }
+
+        // Helper tạo JSON phản hồi nhanh
+        private string JsonSuccess(string msg)
+        {
+            return $"{{\"trang_thai\": \"thanh_cong\", \"thong_bao\": \"{msg}\"}}";
+        }
+
+        private string JsonError(string msg)
+        {
+            return $"{{\"trang_thai\": \"loi\", \"thong_bao\": \"{msg}\"}}";
         }
     }
 }
