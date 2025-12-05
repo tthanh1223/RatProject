@@ -9,8 +9,11 @@ namespace WebSocketTest
 {
     public class SimpleWebSocketServer
     {
-        private HttpListener? _listener; // Thêm ? để cho phép null
+        private HttpListener? _listener;
         private Action<string> _logger;
+        
+        // BIẾN QUAN TRỌNG: Lưu trữ client đang kết nối để gửi tin bất cứ lúc nào
+        private WebSocket? _currentSocket;
 
         public SimpleWebSocketServer(Action<string> loggerMethod)
         {
@@ -22,7 +25,8 @@ namespace WebSocketTest
             _listener = new HttpListener();
             _listener.Prefixes.Add(url);
             _listener.Start();
-            _logger("Server đã khởi động tại: " + url);
+            _logger($"Server đã khởi động tại: {url}");
+            _logger("Đang chờ client kết nối...");
 
             try
             {
@@ -31,7 +35,8 @@ namespace WebSocketTest
                     var context = await _listener.GetContextAsync();
                     if (context.Request.IsWebSocketRequest)
                     {
-                        ProcessClient(context);
+                        // Không dùng await ở đây để không chặn vòng lặp chính
+                        _ = ProcessClient(context);
                     }
                     else
                     {
@@ -42,56 +47,81 @@ namespace WebSocketTest
             }
             catch (Exception ex)
             {
-                _logger("Lỗi Server: " + ex.Message);
+                _logger("Lỗi Listener: " + ex.Message);
             }
         }
 
-        private async void ProcessClient(HttpListenerContext context)
+        private async Task ProcessClient(HttpListenerContext context)
         {
-            var wsContext = await context.AcceptWebSocketAsync(null);
-            WebSocket socket = wsContext.WebSocket;
-
-            _logger("Client đã kết nối!");
-            await SendMessage(socket, "SERVER READY");
-
-            byte[] buffer = new byte[1024];
-
             try
             {
-                while (socket.State == WebSocketState.Open)
+                var wsContext = await context.AcceptWebSocketAsync(null);
+                _currentSocket = wsContext.WebSocket; // LƯU KẾT NỐI LẠI
+
+                _logger("Client đã kết nối thành công!");
+                await SendToClient("SERVER READY"); // Gửi lời chào chủ động
+
+                byte[] buffer = new byte[1024 * 4];
+
+                while (_currentSocket.State == WebSocketState.Open)
                 {
-                    var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    var result = await _currentSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
+                        await _currentSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed by Server", CancellationToken.None);
                         _logger("Client đã ngắt kết nối.");
                     }
                     else
                     {
                         string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                        _logger("Nhận: " + message);
+                        _logger($"[Client]: {message}");
 
+                        // Auto-reply PING/PONG (Logic cũ)
                         if (message == "PING")
                         {
-                            await SendMessage(socket, "PONG");
-                            _logger("Gửi: PONG");
+                            await SendToClient("PONG");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger("Client mất kết nối: " + ex.Message);
+                _logger("Client mất kết nối đột ngột: " + ex.Message);
+            }
+            finally
+            {
+                // Khi vòng lặp kết thúc, hủy biến lưu trữ
+                _currentSocket = null;
             }
         }
 
-        private async Task SendMessage(WebSocket socket, string msg)
+        // --- TÍNH NĂNG MỚI: Gửi tin nhắn chủ động từ Server ---
+        public async Task SendToClient(string msg)
         {
-            if (socket.State == WebSocketState.Open)
+            if (_currentSocket != null && _currentSocket.State == WebSocketState.Open)
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(msg);
-                await socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+                try
+                {
+                    byte[] bytes = Encoding.UTF8.GetBytes(msg);
+                    await _currentSocket.SendAsync(
+                        new ArraySegment<byte>(bytes), 
+                        WebSocketMessageType.Text, 
+                        true, 
+                        CancellationToken.None
+                    );
+                    
+                    // Log ra để biết Server đã gửi gì (trừ PONG cho đỡ spam log)
+                    if(msg != "PONG") _logger($"[Server]: {msg}");
+                }
+                catch (Exception ex)
+                {
+                    _logger("Lỗi khi gửi tin: " + ex.Message);
+                }
+            }
+            else
+            {
+                _logger("⚠️ Không thể gửi: Chưa có Client kết nối!");
             }
         }
     }
