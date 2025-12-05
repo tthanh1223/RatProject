@@ -105,8 +105,10 @@ namespace WebSocketTest
             {
                 switch (cmd)
                 {
-                    case "listApps":
+                    case "listProcesses":
                         return GetProcessList();
+                    case "listApps":
+                        return GetApplicationList();
 
                     case "stopApp":
                         if (string.IsNullOrEmpty(arg)) return JsonError("Chưa nhập tên App");
@@ -129,6 +131,35 @@ namespace WebSocketTest
         }
 
         // 1. Lệnh listApps
+        private string GetApplicationList()
+        {
+            var processes = Process.GetProcesses();
+            StringBuilder sb = new StringBuilder();
+            sb.Append("[");
+            
+            bool isFirst = true;
+            foreach (var p in processes)
+            {
+                // LOGIC LỌC: Chỉ lấy process có Tiêu đề cửa sổ (MainWindowTitle)
+                if (!string.IsNullOrEmpty(p.MainWindowTitle))
+                {
+                    if (!isFirst) sb.Append(",");
+                    
+                    // Lấy thêm MainWindowTitle để hiển thị cho rõ
+                    // Cần Escape ký tự đặc biệt trong JSON (ví dụ dấu ngoặc kép, gạch chéo)
+                    string safeTitle = p.MainWindowTitle
+                        .Replace("\\", "\\\\")
+                        .Replace("\"", "\\\""); 
+                    
+                    sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{p.ProcessName}\", \"tieu_de\": \"{safeTitle}\"}}");
+                    isFirst = false;
+                }
+            }
+            sb.Append("]");
+            return sb.ToString();
+
+        }
+        // Lệnh list process
         private string GetProcessList()
         {
             var processes = Process.GetProcesses();
