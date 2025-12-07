@@ -1,0 +1,88 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\HOANG\\Desktop\\coding\\computernetworking\\RatProject\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{DE2F963E-B4C9-39BA-142D-0F336DB9BBA3}|ServerApp\\WebSocketTest\\WebSocketTest.csproj|c:\\users\\hoang\\desktop\\coding\\computernetworking\\ratproject\\serverapp\\websockettest\\websocketserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DE2F963E-B4C9-39BA-142D-0F336DB9BBA3}|ServerApp\\WebSocketTest\\WebSocketTest.csproj|solutionrelative:serverapp\\websockettest\\websocketserver.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DE2F963E-B4C9-39BA-142D-0F336DB9BBA3}|ServerApp\\WebSocketTest\\WebSocketTest.csproj|c:\\users\\hoang\\desktop\\coding\\computernetworking\\ratproject\\serverapp\\websockettest\\screencapture.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DE2F963E-B4C9-39BA-142D-0F336DB9BBA3}|ServerApp\\WebSocketTest\\WebSocketTest.csproj|solutionrelative:serverapp\\websockettest\\screencapture.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DE2F963E-B4C9-39BA-142D-0F336DB9BBA3}|ServerApp\\WebSocketTest\\WebSocketTest.csproj|c:\\users\\hoang\\desktop\\coding\\computernetworking\\ratproject\\serverapp\\websockettest\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DE2F963E-B4C9-39BA-142D-0F336DB9BBA3}|ServerApp\\WebSocketTest\\WebSocketTest.csproj|solutionrelative:serverapp\\websockettest\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DE2F963E-B4C9-39BA-142D-0F336DB9BBA3}|ServerApp\\WebSocketTest\\WebSocketTest.csproj|c:\\users\\hoang\\desktop\\coding\\computernetworking\\ratproject\\serverapp\\websockettest\\keylog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DE2F963E-B4C9-39BA-142D-0F336DB9BBA3}|ServerApp\\WebSocketTest\\WebSocketTest.csproj|solutionrelative:serverapp\\websockettest\\keylog.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "WebSocketServer.cs",
+              "DocumentMoniker": "C:\\Users\\HOANG\\Desktop\\coding\\computernetworking\\RatProject\\ServerApp\\WebSocketTest\\WebSocketServer.cs",
+              "RelativeDocumentMoniker": "ServerApp\\WebSocketTest\\WebSocketServer.cs",
+              "ToolTip": "C:\\Users\\HOANG\\Desktop\\coding\\computernetworking\\RatProject\\ServerApp\\WebSocketTest\\WebSocketServer.cs",
+              "RelativeToolTip": "ServerApp\\WebSocketTest\\WebSocketServer.cs",
+              "ViewState": "AgIAAHQAAAAAAAAAAADwv48AAABJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-07T08:24:49.33Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ScreenCapture.cs",
+              "DocumentMoniker": "C:\\Users\\HOANG\\Desktop\\coding\\computernetworking\\RatProject\\ServerApp\\WebSocketTest\\ScreenCapture.cs",
+              "RelativeDocumentMoniker": "ServerApp\\WebSocketTest\\ScreenCapture.cs",
+              "ToolTip": "C:\\Users\\HOANG\\Desktop\\coding\\computernetworking\\RatProject\\ServerApp\\WebSocketTest\\ScreenCapture.cs",
+              "RelativeToolTip": "ServerApp\\WebSocketTest\\ScreenCapture.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-07T08:24:41.018Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\HOANG\\Desktop\\coding\\computernetworking\\RatProject\\ServerApp\\WebSocketTest\\Program.cs",
+              "RelativeDocumentMoniker": "ServerApp\\WebSocketTest\\Program.cs",
+              "ToolTip": "C:\\Users\\HOANG\\Desktop\\coding\\computernetworking\\RatProject\\ServerApp\\WebSocketTest\\Program.cs",
+              "RelativeToolTip": "ServerApp\\WebSocketTest\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-07T08:24:12.898Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "keylog.cs",
+              "DocumentMoniker": "C:\\Users\\HOANG\\Desktop\\coding\\computernetworking\\RatProject\\ServerApp\\WebSocketTest\\keylog.cs",
+              "RelativeDocumentMoniker": "ServerApp\\WebSocketTest\\keylog.cs",
+              "ToolTip": "C:\\Users\\HOANG\\Desktop\\coding\\computernetworking\\RatProject\\ServerApp\\WebSocketTest\\keylog.cs",
+              "RelativeToolTip": "ServerApp\\WebSocketTest\\keylog.cs",
+              "ViewState": "AgIAAEEAAAAAAAAAAAAswAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-12-07T08:24:03.458Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

