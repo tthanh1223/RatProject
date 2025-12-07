@@ -7,13 +7,14 @@ Hướng dẫn chạy app:
 
 ### BUG Hiện tại
 - không nhận dạng được ứng dụng explorer.exe trên window (chưa biết fix sao) //Fix ở trong getApplicationList() ấy - anh em
+LH: mỗi các explorer.exe thôi hả, kệ nó luôn đi. Lúc demo đừng bật là được
 
 
 
 ## Cái gì chưa xong
-- Tao vẫn chưa cấu trúc lại file
+- Tao vẫn chưa cấu trúc lại file (LH: yasou, chắc chắn là như vậy rồi)
 - Chưa làm xong quay cam
-- Mấy có mấy cái cơ bản (shutdown, restart hay sleep)
+- Mấy có mấy cái cơ bản (shutdown, restart hay sleep) (LH: đã làm xong shutdown / restart)
 
 
 Anh em có code gì thì nhớ pull về sửa commit, branch main luôn không cần branch phụ
