@@ -7,7 +7,7 @@ Hướng dẫn chạy app:
 
 ### BUG Hiện tại
 - không nhận dạng được ứng dụng explorer.exe trên window (chưa biết fix sao) //Fix ở trong getApplicationList() ấy - anh em
-LH: mỗi các explorer.exe thôi hả, kệ nó luôn đi. Lúc demo đừng bật là được
+- LH: mỗi các explorer.exe thôi hả, kệ nó luôn đi. Lúc demo đừng bật là được
 
 
 
