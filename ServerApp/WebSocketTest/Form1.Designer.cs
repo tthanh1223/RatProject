@@ -13,6 +13,7 @@
         private void InitializeComponent()
         {
             this.btnStart = new System.Windows.Forms.Button();
+            this.btnStop = new System.Windows.Forms.Button();
             this.txtLog = new System.Windows.Forms.RichTextBox();
             this.txtMessage = new System.Windows.Forms.TextBox();
             this.btnSend = new System.Windows.Forms.Button();
@@ -27,6 +28,17 @@
             this.btnStart.Text = "Start Server";
             this.btnStart.UseVisualStyleBackColor = true;
             this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
+            // 
+            // btnStop
+            // 
+            this.btnStop.Location = new System.Drawing.Point(118, 12);
+            this.btnStop.Name = "btnStop";
+            this.btnStop.Size = new System.Drawing.Size(100, 35);
+            this.btnStop.TabIndex = 4;
+            this.btnStop.Text = "Stop Server";
+            this.btnStop.UseVisualStyleBackColor = true;
+            this.btnStop.Enabled = false;
+            this.btnStop.Click += new System.EventHandler(this.btnStop_Click);
             // 
             // txtLog
             // 
@@ -63,6 +75,7 @@
             this.Controls.Add(this.btnSend);
             this.Controls.Add(this.txtMessage);
             this.Controls.Add(this.txtLog);
+            this.Controls.Add(this.btnStop);
             this.Controls.Add(this.btnStart);
             this.Name = "Form1";
             this.Text = "WebSocket Server (Full Duplex)";
@@ -71,6 +84,7 @@
         }
 
         private System.Windows.Forms.Button btnStart;
+        private System.Windows.Forms.Button btnStop;
         private System.Windows.Forms.RichTextBox txtLog;
         private System.Windows.Forms.TextBox txtMessage;
         private System.Windows.Forms.Button btnSend;

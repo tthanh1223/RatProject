@@ -6,6 +6,7 @@ namespace WebSocketTest
     public partial class Form1 : Form
     {
         private SimpleWebSocketServer? _server;
+        private bool _serverRunning = false;
 
         public Form1()
         {
@@ -20,13 +21,35 @@ namespace WebSocketTest
                 _server = new SimpleWebSocketServer(LogToUI);
                 _server.Start("http://localhost:8080/");
                 
+                _serverRunning = true;
                 btnStart.Enabled = false;
                 btnStart.Text = "Running...";
+                btnStop.Enabled = true;
                 LogToUI("Server sẵn sàng. Hãy kết nối Client!");
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Lỗi (Chạy Admin chưa?): " + ex.Message);
+            }
+        }
+
+        private void btnStop_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_server != null)
+                {
+                    _server.Stop();
+                    _serverRunning = false;
+                    btnStart.Enabled = true;
+                    btnStart.Text = "Start Server";
+                    btnStop.Enabled = false;
+                    LogToUI("Server đã dừng!");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi dừng server: " + ex.Message);
             }
         }
 
