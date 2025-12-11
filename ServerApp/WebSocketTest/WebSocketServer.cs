@@ -30,6 +30,8 @@ namespace WebSocketTest
             _listener.Start();
             _isRunning = true;
             _logger($"Server đã khởi động tại: {url}");
+            _logger($"Để kết nối từ máy khác, dùng: ws://<IP_MÁCHNA_NÀY>:8080/");
+            _logger($"Truy cập từ máy khác: ws://<IP_CỦA_MÁY_NÀY>:8080/");
 
             try
             {

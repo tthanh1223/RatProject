@@ -247,7 +247,15 @@
     </div>
 
 <script>
-    const WS_URL = "ws://localhost:8080/";
+    // Nhận IP của Server từ user input hoặc mặc định
+    // Cách sử dụng: ?server=192.168.1.100 hoặc thay localhost
+    const params = new URLSearchParams(window.location.search);
+    const SERVER_IP = params.get('server') || 'localhost'; // Mặc định là localhost
+    const WS_URL = `ws://${SERVER_IP}:8080/`;
+    
+    // Hiển thị IP server hiện tại
+    console.log(`Kết nối đến Server WebSocket: ${WS_URL}`);
+    
     let socket = null;
     let currentTab = 'apps';
 

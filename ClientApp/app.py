@@ -17,5 +17,7 @@ async def read_root(request: Request):
 
 if __name__ == "__main__":
     # Chạy Web Server ở cổng 3000
-    print("Web App đang chạy tại: http://localhost:3000")
-    uvicorn.run(app, host="127.0.0.1", port=3000)
+    # Thay đổi: Lắng nghe trên 0.0.0.0 để cho phép truy cập từ máy khác
+    print("Web App đang chạy tại: http://0.0.0.0:3000")
+    print("Từ máy khác, truy cập: http://<IP_CỦA_MÁY_NÀY>:3000")
+    uvicorn.run(app, host="0.0.0.0", port=3000)
