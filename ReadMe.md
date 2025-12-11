@@ -13,7 +13,7 @@ Hướng dẫn chạy app:
 
 ## Cái gì chưa xong
 - Tao vẫn chưa cấu trúc lại file (LH: yasou, chắc chắn là như vậy rồi)
-- Chưa làm xong quay cam
+- Chưa làm xong quay cam (Đã xong)
 - Mấy có mấy cái cơ bản (shutdown, restart hay sleep) (LH: đã làm xong shutdown / restart)
 
 
@@ -24,13 +24,13 @@ Anh em có code gì thì nhớ pull về sửa commit, branch main luôn không 
 - Nhớ là phải cài mấy cái trên
 - Đầu tiên dùng terminal chỉ vào file WebSocketTest ấy
 - `cd ServerApp/WebSocketTest`
+- chạy `dotnet restore` // để tải thư viện thiếu về
 - chạy `dotnet run`
 - hiện lên cái window, bấm start server thôi
 
 - Sau đó tạo terminal khác vào `cd ClientApp`
 - chạy `py app.py`
 - rồi vào cái localhost - xong ngồi test thử
-
 
 
 # LƯU Ý: SỬA GÌ COMMIT ĐÓ DỄ THEO DÕI
