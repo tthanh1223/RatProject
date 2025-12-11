@@ -19,10 +19,7 @@ namespace WebSocketTest
             {
                 // Truyền hàm LogToUI vào server để nó gọi khi cần in log
                 _server = new SimpleWebSocketServer(LogToUI);
-<<<<<<< HEAD
                 // Thay đổi: Lắng nghe trên 0.0.0.0 để cho phép kết nối từ máy khác
-=======
->>>>>>> b56fdfc616d1ab20a3066f734bc70565f304a0b4
                 _server.Start("http://localhost:8080/");
                 
                 _serverRunning = true;

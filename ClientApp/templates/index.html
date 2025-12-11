@@ -3,114 +3,266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Manager Remote</title>
+    <title>Pixel Task Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
     <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f4f7f6; height: 100vh; display: flex; flex-direction: column; }
+        :root {
+            --bg-color: #5d5678;
+            --panel-bg: #fffbf0;
+            --border-color: #000;
+            --shadow-color: #000;
+            --primary: #5e6ad2;
+            --success: #00e436; /* Neon Green */
+            --danger: #ff2a6d;   /* Neon Pink/Red */
+            --warning: #ffcc00;  /* Retro Yellow */
+            --text-main: #2d2d2d;
+        }
+
+        body { 
+            font-family: 'VT323', monospace; 
+            margin: 0; 
+            background: var(--bg-color); 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            color: var(--text-main);
+            font-size: 18px;
+            background-image: radial-gradient(#6d6688 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
         
+        /* SCROLLBAR RETRO */
+        ::-webkit-scrollbar { width: 12px; height: 12px; }
+        ::-webkit-scrollbar-track { background: #ddd; border-left: 2px solid #000; }
+        ::-webkit-scrollbar-thumb { background: #555; border: 2px solid #000; }
+        ::-webkit-scrollbar-thumb:hover { background: #000; }
+
         /* HEADER & TABS */
-        .header { background: #2c3e50; padding: 15px 20px; color: white; display: flex; justify-content: space-between; align-items: center; }
-        .tab-container { display: flex; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; color: #555; border-bottom: 3px solid transparent; transition: 0.3s; }
-        .tab:hover { background: #f8f9fa; }
-        .tab.active { border-bottom: 3px solid #007bff; color: #007bff; background: #eef7ff; }
+        .header { 
+            background: #222; 
+            padding: 10px 20px; 
+            color: #00e436; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 4px solid #000;
+            font-size: 24px;
+            text-shadow: 2px 2px #000;
+        }
+        
+        .tab-container { 
+            display: flex; 
+            background: #ccc; 
+            padding-top: 10px;
+            padding-left: 10px;
+            border-bottom: 4px solid #000;
+            gap: 5px;
+        }
+        
+        .tab { 
+            padding: 8px 20px; 
+            text-align: center; 
+            cursor: pointer; 
+            font-weight: bold; 
+            color: #555; 
+            background: #999;
+            border: 2px solid #000;
+            border-bottom: none;
+            position: relative;
+            top: 4px; /* Đẩy xuống để khớp border */
+            transition: 0.1s;
+            font-size: 20px;
+        }
+        
+        .tab:hover { background: #bbb; top: 0px; }
+        
+        .tab.active { 
+            background: var(--panel-bg); 
+            color: #000; 
+            top: 4px;
+            border-bottom: 4px solid var(--panel-bg); /* Che border container */
+            z-index: 10;
+        }
 
         /* MAIN CONTENT */
         .content { flex: 1; padding: 20px; overflow-y: hidden; display: flex; gap: 20px; }
         
-        /* Left Panel (Tables) */
-        .view-panel { flex: 3; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
-        .toolbar { padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: center; }
-        .scroll-area { flex: 1; overflow-y: auto; }
+        /* PIXEL BOX STYLE */
+        .pixel-box {
+            background: var(--panel-bg);
+            border: 4px solid var(--border-color);
+            box-shadow: 8px 8px 0px var(--shadow-color);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        .view-panel { flex: 3; }
         
-        table { width: 100%; border-collapse: collapse; }
-        th { position: sticky; top: 0; background: #f8f9fa; text-align: left; padding: 12px; border-bottom: 2px solid #ddd; font-size: 13px; color: #666; }
-        td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 14px; }
-        tr:hover { background: #f1f8ff; }
+        /* TOOLBAR */
+        .toolbar { 
+            padding: 15px; 
+            border-bottom: 4px solid #000; 
+            background: #eee;
+            display: flex; 
+            gap: 15px; 
+            align-items: center; 
+            flex-wrap: wrap;
+        }
+        
+        .scroll-area { flex: 1; overflow-y: auto; position: relative; }
+        
+        /* TABLES */
+        table { width: 100%; border-collapse: collapse; font-size: 18px; }
+        th { 
+            position: sticky; top: 0; 
+            background: #000; 
+            color: #fff; 
+            text-align: left; 
+            padding: 10px; 
+            border-bottom: 4px solid #000; 
+            font-weight: normal;
+            letter-spacing: 1px;
+        }
+        td { padding: 8px 10px; border-bottom: 2px solid #ccc; font-family: 'Courier New', monospace; font-weight: bold; }
+        tr:hover { background: #fffaaa; cursor: crosshair; }
         
         /* Right Panel (Chat/Log) */
-        .log-panel { flex: 1; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
-        .log-header { padding: 10px; background: #eee; border-radius: 8px 8px 0 0; font-weight: bold; font-size: 13px; }
-        #chat-content { flex: 1; padding: 10px; overflow-y: auto; font-family: monospace; font-size: 12px; }
-        .log-input { display: flex; padding: 10px; border-top: 1px solid #eee; }
+        .log-panel { flex: 1; min-width: 300px; }
+        .log-header { 
+            padding: 10px; 
+            background: #000; 
+            color: #fff; 
+            text-align: center;
+            font-size: 20px; 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        #chat-content { 
+            flex: 1; padding: 10px; overflow-y: auto; 
+            font-family: 'Courier New', monospace; font-size: 14px; 
+            background: #000; color: #0f0; /* Matrix style */
+        }
+        .log-input { display: flex; padding: 10px; border-top: 4px solid #000; background: #eee; gap: 10px;}
 
-        /* Buttons & Inputs */
-        input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; outline: none; }
-        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: 500; }
-        .btn-refresh { background: #17a2b8; }
-        .btn-exec { background: #28a745; }
-        .btn-kill { background: #dc3545; padding: 4px 10px; font-size: 12px; color: white;}
-        
+        /* INPUTS & BUTTONS PIXEL STYLE */
+        input { 
+            padding: 8px; 
+            border: 2px solid #000; 
+            background: #fff; 
+            font-family: 'VT323', monospace;
+            font-size: 18px;
+            outline: none;
+            box-shadow: inset 2px 2px 0px #ccc;
+            flex: 1;
+        }
+        input:focus { background: #e8f0fe; }
+
+        button { 
+            padding: 5px 20px; 
+            border: 2px solid #000; 
+            cursor: pointer; 
+            color: #000; 
+            font-weight: bold; 
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0px #000;
+            transition: all 0.1s;
+            height: 40px; /* Cố định chiều cao cho đều */
+            display: flex; align-items: center; justify-content: center;
+        }
+        button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
+        button:disabled {
+            background: #aaa !important;
+            cursor: not-allowed;
+            color: #555;
+        }
+
+        /* Button Colors */
+        .btn-refresh { background: var(--warning); }
+        .btn-exec { background: var(--success); }
+        .btn-kill { background: var(--danger); color: white; }
+        .btn-neutral { background: #fff; }
+        .btn-dark { background: #444; color: #fff; }
+
         /* Utils */
         .hidden { display: none !important; }
-        .status-dot { height: 10px; width: 10px; background-color: #bbb; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .online { background-color: #28a745; }
-        .mem-col { color: #666; font-size: 13px; }
+        .status-dot { 
+            height: 12px; width: 12px; 
+            background-color: #555; 
+            border: 2px solid #fff; 
+            display: inline-block; margin-right: 5px; 
+            box-shadow: 0 0 5px #000;
+        }
+        .online { background-color: #0f0; box-shadow: 0 0 8px #0f0; }
+        .mem-col { color: #666; font-family: monospace; }
+        .spacer { flex: 1; } /* Helper để đẩy nút sang 2 bên */
 
-        /* MODAL ZOOM */
+        /* SCREENS & IMAGES */
+        #screen-img, #video-screen { 
+            image-rendering: pixelated; /* Giữ độ sắc nét pixel */
+            border: 4px solid #000;
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.5);
+            max-width: 100%;
+        }
+
+        /* MODAL */
         .modal {
             display: none; position: fixed; z-index: 1000; left: 0; top: 0;
             width: 100%; height: 100%; overflow: auto; 
-            background-color: rgba(0,0,0,0.9);
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: grayscale(1);
         }
         .modal-content {
             margin: auto; display: block; 
             max-width: 90%; max-height: 90vh;
             position: absolute; top: 50%; left: 50%; 
             transform: translate(-50%, -50%);
-            border: 2px solid white; box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            border: 4px solid #fff; 
+            box-shadow: 10px 10px 0 #000;
+            image-rendering: pixelated;
         }
         .close-modal {
             position: absolute; top: 20px; right: 35px;
-            color: #f1f1f1; font-size: 40px; font-weight: bold; cursor: pointer;
+            color: #fff; font-size: 50px; font-weight: bold; cursor: pointer;
+            text-shadow: 4px 4px 0 #000;
+            font-family: sans-serif;
         }
-        .close-modal:hover { color: #bbb; }
-        #screen-img { cursor: zoom-in; }
-        /* CSS cho Video Player container */
+
+        /* VIDEO CONTAINER SPECIFIC */
         #view-webcam {
-            text-align: center; 
-            padding: 20px; 
             background: #222;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center;
-            height: 100%;
+            display: flex; flex-direction: column; 
+            align-items: center; justify-content: center;
         }
         #video-player-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            background: #111;
-            padding: 15px;
-            border-radius: 8px;
-        }
-        #video-player-container.hidden {
-            display: none !important;
-        }
-        #video-screen {
-            max-width: 800px !important;
-            width: 100%;
-            height: auto;
-            border: 2px solid #555;
-            border-radius: 4px;
+            background: #ccc;
+            padding: 10px;
+            border: 4px solid #000;
+            box-shadow: 8px 8px 0 #000;
         }
         .video-controls {
-            width: 100%;
-            max-width: 800px;
-            background: #333;
-            padding: 10px;
-            box-sizing: border-box;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            border-radius: 4px;
+            margin-top: 10px;
+            background: #555;
+            padding: 5px;
+            display: flex; gap: 5px; align-items: center;
+            border: 2px solid #000;
         }
-        .btn-download {
-            display: inline-block; margin-top: 15px; padding: 10px 20px;
-            background: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;
+        /* Custom Range Input */
+        input[type=range] {
+            -webkit-appearance: none; background: transparent; padding: 0; border: none; box-shadow: none;
         }
-        .btn-download:hover { background: #0056b3; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 20px; width: 10px; background: #fff; border: 2px solid #000; cursor: pointer; margin-top: -8px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #000;
+        }
     </style>
 </head>
 <body>
@@ -120,103 +272,110 @@
     </div>
 
     <div class="header">
-        <div>📡 Remote Controller</div>
-        <div style="font-size: 14px;"><span id="status-dot" class="status-dot"></span><span id="status-text">Disconnected</span></div>
+        <div>📡 REMOTE_CONTROLLER_V1.0</div>
+        <div style="font-size: 20px; display: flex; align-items: center;">
+            <span id="status-dot" class="status-dot"></span>
+            <span id="status-text">DISCONNECTED</span>
+        </div>
     </div>
 
     <div class="tab-container">
-        <div class="tab active" onclick="switchTab('apps')">🖥️ Ứng dụng (Apps)</div>
-        <div class="tab" onclick="switchTab('processes')">⚙️ Tiến trình (Processes)</div>
-        <div class="tab" onclick="switchTab('screen')">📸 Màn hình</div>
-        <div class="tab" onclick="switchTab('keylog')">⌨️ Keylogger</div>
-        <div class="tab" onclick="switchTab('shutdown')">🔌 Shutdown/Restart</div>
-        <div class="tab" onclick="switchTab('webcam')">📹 Webcam</div>
+        <div class="tab active" onclick="switchTab('apps')">🖥️ APPS</div>
+        <div class="tab" onclick="switchTab('processes')">⚙️ PROCS</div>
+        <div class="tab" onclick="switchTab('screen')">📸 SCRN</div>
+        <div class="tab" onclick="switchTab('keylog')">⌨️ KEYS</div>
+        <div class="tab" onclick="switchTab('shutdown')">🔌 POWER</div>
+        <div class="tab" onclick="switchTab('webcam')">📹 CAM</div>
     </div>
     
     <div class="content">
-        <div class="view-panel">
+        <div class="view-panel pixel-box">
+            
             <div id="toolbar-apps" class="toolbar">
-                <button class="btn-refresh" onclick="sendCmd('listApps')">🔄 Làm mới</button>
-                <div style="flex:1"></div>
-                <input type="text" id="appInput" placeholder="Tên file (vd: msedge)...">
+                <button class="btn-refresh" onclick="sendCmd('listApps')">🔄 Refresh</button>
+                <div class="spacer"></div>
+                <input type="text" id="appInput" placeholder="Ex: notepad...">
                 <button class="btn-exec" onclick="startApp()">▶ Start App</button>
             </div>
 
             <div id="toolbar-processes" class="toolbar hidden">
-                <button class="btn-refresh" onclick="sendCmd('listProcesses')">🔄 Refresh Process</button>
-                <div style="flex:1"></div>
-                <input type="text" id="procInput" placeholder="New Task (vd: cmd.exe)...">
+                <button class="btn-refresh" onclick="sendCmd('listProcesses')">🔄 Refresh</button>
+                <div class="spacer"></div>
+                <input type="text" id="procInput" placeholder="Ex: cmd.exe...">
                 <button class="btn-exec" onclick="startProcessTask()">▶ Run Task</button>
             </div>
 
             <div id="toolbar-screen" class="toolbar hidden">
-                <button class="btn-refresh" onclick="sendCmd('get_screen')">📸 Chụp ngay</button>
-                <button class="btn-exec" onclick="saveScreenshot()">💾 Lưu ảnh PNG</button>
-                <div style="flex:1"></div>
-                <span style="color:#666; font-size:13px">Ảnh được nén JPEG.</span>
+                <button class="btn-refresh" onclick="sendCmd('get_screen')">📸 Capture</button>
+                <button class="btn-exec" onclick="saveScreenshot()">💾 Save PNG</button>
+                <div class="spacer"></div>
+                <span style="color:#555; font-size:16px; font-weight:bold;">[FMT: JPEG]</span>
             </div>
 
             <div id="toolbar-keylog" class="toolbar hidden">
-                <button type="button" class="btn-exec" onclick="sendCmd('keylog_start')" onkeydown="if(event.code==='Space') event.preventDefault()">▶ Bắt đầu ghi</button>
-                <button type="button" class="btn-kill" onclick="sendCmd('keylog_stop')" onkeydown="if(event.code==='Space') event.preventDefault()">⏹ Dừng ghi</button>
-                <button type="button" class="btn-refresh" onclick="sendCmd('keylog_get')" onkeydown="if(event.code==='Space') event.preventDefault()">📥 Lấy dữ liệu</button>
-                <button type="button" class="btn-kill" style="background:#666" onclick="sendCmd('keylog_clear')" onkeydown="if(event.code==='Space') event.preventDefault()">🗑 Xóa Log</button>
+                <button type="button" class="btn-exec" onclick="sendCmd('keylog_start')">▶ REC</button>
+                <button type="button" class="btn-kill" onclick="sendCmd('keylog_stop')">⏹ STOP</button>
+                <button type="button" class="btn-refresh" onclick="sendCmd('keylog_get')">📥 PULL</button>
+                <div class="spacer"></div>
+                <button type="button" class="btn-dark" onclick="sendCmd('keylog_clear')">🗑 CLEAR</button>
             </div>
 
             <div id="toolbar-shutdown" class="toolbar hidden">
-                <button class="btn-kill" style="background:#dc3545" onclick="confirmShutdown()">🔴 Shutdown</button>
-                <button class="btn-kill" style="background:#fd7e14" onclick="confirmRestart()">🔄 Restart</button>
-                <div style="flex:1"></div>
-                <span style="color:#666; font-size:13px">Các lệnh này sẽ được thực hiện ngay lập tức.</span>
+                <button class="btn-kill" onclick="confirmShutdown()">🔴 SHUTDOWN</button>
+                <button class="btn-refresh" style="background: #fd7e14; color:white;" onclick="confirmRestart()">🔄 RESTART</button>
+                <div class="spacer"></div>
+                <span style="color:#d00; font-weight:bold;">⚠️ DANGER ZONE</span>
             </div>
 
             <div id="toolbar-webcam" class="toolbar hidden">
-                <button class="btn-refresh" onclick="sendCmd('get_cam')">📹 Quay 5 giây</button>
-                <button id="btn-save-video" class="btn-exec" onclick="exportAndDownload()">💾 Lưu Video</button>
-                <div style="flex:1"></div>
-                <span style="color:#666; font-size:13px">Ghi hình từ webcam và xem lại.</span>
+                <button class="btn-refresh" onclick="sendCmd('get_cam')">📹 REC 5s</button>
+                <button id="btn-save-video" class="btn-exec" onclick="exportAndDownload()">💾 SAVE VID</button>
+                <div class="spacer"></div>
+                <span style="color:#555">[WEBCAM STREAM]</span>
             </div>
 
-            <div id="view-keylog" class="hidden scroll-area" style="padding: 15px;">
-                <textarea id="txtKeylogs" style="width: 95%; height: 95%; background: #222; color: #0f0; font-family: monospace; border: none; padding: 10px; resize: none;" readonly placeholder="Chưa có dữ liệu log..." onkeydown="event.preventDefault()"></textarea>
+            <div id="view-keylog" class="hidden scroll-area" style="padding: 0; background: #000;">
+                <textarea id="txtKeylogs" style="width: 100%; height: 100%; background: #000; color: #0f0; font-family: 'Courier New', monospace; border: none; padding: 15px; resize: none; box-sizing: border-box; outline: none;" readonly placeholder="> WAITING FOR DATA..." onkeydown="event.preventDefault()"></textarea>
             </div>
 
-            <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 10px; background: #333; height: 100%;">
-                <div id="loading-screen" style="color: white; display: none;">⏳ Đang nhận dữ liệu ảnh...</div>
-                <img id="screen-img" onclick="openModal()" style="max-width: 100%; max-height: 100%; border: 2px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5);" />
+            <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 20px; background: #333; height: 100%;">
+                <div id="loading-screen" style="color: #0f0; display: none; margin-bottom: 10px;">⏳ RECEIVING DATA...</div>
+                <img id="screen-img" onclick="openModal()" />
             </div>
+
             <div id="view-webcam" class="hidden scroll-area" style="height: 100%;">
-                <div id="cam-status" style="color: #ccc; margin-top: 20px; text-align: center;">
-                    Bấm "Quay 5 giây" để bắt đầu.
+                <div id="cam-status" style="color: #888; margin-top: 50px; text-align: center; font-size: 24px;">
+                    PRESS [REC 5s] TO START
                 </div>
-                <div id="loading-cam" style="color: #ffd700; display: none; text-align: center; margin-top: 20px; font-size: 18px;">
-                    ⏳ Đang ghi hình (5s) và nén dữ liệu...
+                <div id="loading-cam" style="color: #ffcc00; display: none; text-align: center; margin-top: 20px; font-size: 20px;">
+                    ⏳ RECORDING & COMPRESSING...
                 </div>
 
                 <div id="video-player-container" class="hidden">
-                    <div style="position: relative; background: black; line-height: 0; display: flex; align-items: center; justify-content: center;">
-                        <img id="video-screen" />
-                        <div id="replay-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); cursor: pointer;" onclick="playVideo()">
-                            <span style="color: white; font-size: 80px;">▶</span>
+                    <div style="position: relative; background: black; line-height: 0; display: flex; align-items: center; justify-content: center; border: 2px solid #555;">
+                        <img id="video-screen" style="width:100%; height:auto; box-shadow:none; border:none;" />
+                        <div id="replay-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); cursor: pointer;" onclick="playVideo()">
+                            <span style="color: #0f0; font-size: 80px; text-shadow: 4px 4px 0 #000;">▶</span>
                         </div>
                     </div>
 
                     <div class="video-controls">
-                        <button onclick="playVideo()" style="background: #28a745; width: 40px;">▶</button>
-                        <button onclick="pauseVideo()" style="background: #dc3545; width: 40px;">⏸</button>
-                        <input type="range" id="video-seeker" min="0" max="100" value="0" style="flex: 1;">
-                        <span id="frame-counter" style="color: white; font-family: monospace; font-size: 12px;">0/0</span>
+                        <button onclick="playVideo()" class="btn-exec" style="width: 40px; height: 30px; font-size: 16px;">▶</button>
+                        <button onclick="pauseVideo()" class="btn-kill" style="width: 40px; height: 30px; font-size: 16px;">II</button>
+                        <input type="range" id="video-seeker" min="0" max="100" value="0" style="flex: 1; margin: 0 10px;">
+                        <span id="frame-counter" style="color: white; font-family: monospace; font-size: 14px;">000/000</span>
                     </div>
                 </div>
             </div>
+
             <div id="view-tables" class="scroll-area">
                 <table id="table-apps">
                     <thead>
                         <tr>
-                            <th width="60">PID</th>
-                            <th>Tiêu đề cửa sổ</th>
-                            <th>Tên File</th>
-                            <th width="80">Action</th>
+                            <th width="80">PID</th>
+                            <th>WINDOW TITLE</th>
+                            <th>FILE NAME</th>
+                            <th width="100">ACTION</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-apps"></tbody>
@@ -225,10 +384,10 @@
                 <table id="table-processes" class="hidden">
                     <thead>
                         <tr>
-                            <th width="80">PID</th>
-                            <th>Process Name</th>
-                            <th>Memory (MB)</th>
-                            <th width="80">Action</th>
+                            <th width="100">PID</th>
+                            <th>PROCESS NAME</th>
+                            <th>MEM (MB)</th>
+                            <th width="100">ACTION</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-processes"></tbody>
@@ -236,24 +395,22 @@
             </div>
         </div>
 
-        <div class="log-panel">
-            <div class="log-header">System Log</div>
+        <div class="log-panel pixel-box">
+            <div class="log-header">SYSTEM LOG</div>
             <div id="chat-content"></div>
             <div class="log-input">
-                <input type="text" id="chatInput" style="flex:1; margin-right:5px" placeholder="Chat...">
-                <button onclick="sendChat()" style="background:#6c757d">Gửi</button>
+                <input type="text" id="chatInput" placeholder="CMD/Chat...">
+                <button onclick="sendChat()" class="btn-neutral">SEND</button>
             </div>
         </div>
     </div>
 
 <script>
     // Nhận IP của Server từ user input hoặc mặc định
-    // Cách sử dụng: ?server=192.168.1.100 hoặc thay localhost
     const params = new URLSearchParams(window.location.search);
-    const SERVER_IP = params.get('server') || 'localhost'; // Mặc định là localhost
+    const SERVER_IP = params.get('server') || 'localhost'; 
     const WS_URL = `ws://${SERVER_IP}:8080/`;
     
-    // Hiển thị IP server hiện tại
     console.log(`Kết nối đến Server WebSocket: ${WS_URL}`);
     
     let socket = null;
@@ -274,73 +431,68 @@
                 
                 if (json.type === 'apps') {
                     renderApps(json.data);
-                    log(`Đã tải ${json.data.length} ứng dụng.`);
+                    log(`> Loaded ${json.data.length} apps.`);
                 }
                 else if (json.type === 'processes') {
                     renderProcesses(json.data);
-                    log(`Đã tải ${json.data.length} tiến trình.`);
+                    log(`> Loaded ${json.data.length} processes.`);
                 }
                 else if (json.type === 'screen_capture') {
                     document.getElementById('loading-screen').style.display = 'none';
                     const img = document.getElementById('screen-img');
                     img.src = "data:image/jpeg;base64," + json.data;
                     
-                    // Nếu đang mở modal thì cập nhật luôn ảnh trong modal
                     const modalImg = document.getElementById("img01");
                     if(document.getElementById('imgModal').style.display === 'block') {
                         modalImg.src = img.src;
                     }
-                    log("Đã nhận ảnh chụp màn hình.");
+                    log("> Screen capture received.");
                 }
                 else if (json.type === 'keylog_data') {
                     const txt = document.getElementById('txtKeylogs');
                     txt.value = json.data;
                     txt.scrollTop = txt.scrollHeight; 
-                    log("Đã tải dữ liệu Keylogger.");
+                    log("> Keylogs updated.");
                 }
-                // === XỬ LÝ VIDEO BATCH MỚI ===
+                // === XỬ LÝ VIDEO ===
                 else if (json.type === 'video_start') {
-                    // Bắt đầu nhận video - khởi tạo mảng
                     videoFrames = [];
                     currentFrameIdx = 0;
-                    document.getElementById('cam-status').style.display = 'none'; // Che thông báo cũ
-                    document.getElementById('video-player-container').classList.add('hidden'); // Che player cũ nếu có
+                    document.getElementById('cam-status').style.display = 'none';
+                    document.getElementById('video-player-container').classList.add('hidden');
                     document.getElementById('loading-cam').style.display = 'block';
-                    log(`Bắt đầu nhận video (${json.count} frames)...`);
+                    log(`> Video start (${json.count} frames)...`);
                 }
                 else if (json.type === 'video_batch') {
-                    // Nhận batch frames
                     if (json.frames && json.frames.length > 0) {
                         json.frames.forEach(frame => {
                             videoFrames.push(frame.data);
                         });
-                        log(`Đã nhận batch: ${videoFrames.length} frames tích luỹ...`);
+                        log(`> Batch received: ${videoFrames.length} frames...`);
                     }
                 }
                 else if (json.type === 'video_end') {
-                    // Kết thúc nhận video
                     document.getElementById('loading-cam').style.display = 'none';
                     document.getElementById('cam-status').style.display = 'none';
                     if (videoFrames.length > 0) {
                         loadVideoPlayer(videoFrames);
-                        log(`✓ Nhận xong video (${videoFrames.length} frames)`);
+                        log(`> Video complete (${videoFrames.length} frames)`);
                     } else {
-                        log("❌ Không nhận được frame nào");
+                        log("> ❌ No frames received");
                     }
                 }
                 else if (json.type === 'video_stream') {
-                    // Format cũ (nếu server gửi toàn bộ một lần)
                     document.getElementById('loading-cam').style.display = 'none';
                     document.getElementById('cam-status').style.display = 'none';
                     loadVideoPlayer(json.data);
-                    log("Đã nhận video (" + json.data.length + " frames).");
+                    log("> Video loaded.");
                 }
                 else if (json.trang_thai) {
                     log(`[${json.trang_thai}] ${json.thong_bao}`);
                     if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
                 }
             } catch (e) {
-                log("Server: " + data);
+                log("Err: " + data);
             }
         };
 
@@ -354,22 +506,18 @@
     function switchTab(tab) {
         currentTab = tab;
         
-        // 1. UI Tabs Active
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         event.target.classList.add('active');
 
-        // 2. Ẩn HẾT toolbar
         ['apps', 'processes', 'screen', 'keylog', 'shutdown','webcam'].forEach(t => {
             document.getElementById(`toolbar-${t}`).classList.add('hidden');
         });
 
-        // 3. Ẩn HẾT view (Khung hiển thị)
         document.getElementById('view-tables').classList.add('hidden');
         document.getElementById('view-screen').classList.add('hidden');
         document.getElementById('view-keylog').classList.add('hidden');
         document.getElementById('view-webcam').classList.add('hidden');
 
-        // 4. Hiện view tương ứng
         document.getElementById(`toolbar-${tab}`).classList.remove('hidden');
 
         if (tab === 'apps') {
@@ -384,20 +532,15 @@
         } 
         else if (tab === 'screen') {
             document.getElementById('view-screen').classList.remove('hidden');
-            // Màn hình cần display flex/block để hiện đúng
             document.getElementById('view-screen').style.display = 'block'; 
         } 
         else if (tab === 'keylog') {
             document.getElementById('view-keylog').classList.remove('hidden');
         }
-        else if (tab === 'shutdown') {
-            // Không cần hiển thị view khác, chỉ hiện toolbar
-        }
         else if (tab === 'webcam') {
             document.getElementById('view-webcam').classList.remove('hidden');
         }
         
-        // Không auto-refresh tab screen/keylog/shutdown để tiết kiệm băng thông
         if (tab !== 'screen' && tab !== 'keylog' && tab !== 'shutdown') refreshCurrentTab();
     }
 
@@ -415,9 +558,9 @@
             tbody.innerHTML += `
                 <tr>
                     <td>${app.pid}</td>
-                    <td style="color:#007bff; font-weight:500">${app.tieu_de}</td>
+                    <td style="color:#5e6ad2">${app.tieu_de}</td>
                     <td>${app.ten}.exe</td>
-                    <td><button class="btn-kill" onclick="stopApp('${app.ten}')">Close</button></td>
+                    <td><button class="btn-kill" style="font-size:14px; padding:2px 10px; height:auto;" onclick="stopApp('${app.ten}')">X</button></td>
                 </tr>
             `;
         });
@@ -431,8 +574,8 @@
                 <tr>
                     <td>${proc.pid}</td>
                     <td><b>${proc.ten}</b></td>
-                    <td class="mem-col">${proc.mem} MB</td>
-                    <td><button class="btn-kill" style="background:#343a40" onclick="killProcess(${proc.pid})">Kill</button></td>
+                    <td class="mem-col">${proc.mem}</td>
+                    <td><button class="btn-kill" style="font-size:14px; padding:2px 10px; height:auto; background:#444;" onclick="killProcess(${proc.pid})">KILL</button></td>
                 </tr>
             `;
         });
@@ -442,9 +585,7 @@
     function sendCmd(cmd) {
         if(socket && socket.readyState === 1) {
             socket.send(cmd);
-            if (cmd === 'get_screen') {
-                document.getElementById('loading-screen').style.display = 'block';
-            }
+            if (cmd === 'get_screen') document.getElementById('loading-screen').style.display = 'block';
             if (cmd === 'get_cam') {
                 document.getElementById('loading-cam').style.display = 'block';
                 document.getElementById('cam-status').style.display = 'none';
@@ -457,27 +598,27 @@
         if(name) sendCmd(`startApp ${name}`);
     }
     function stopApp(name) {
-        if(confirm(`Đóng cửa sổ ứng dụng '${name}'?`)) sendCmd(`stopApp ${name}`);
+        if(confirm(`Close app '${name}'?`)) sendCmd(`stopApp ${name}`);
     }
     function startProcessTask() {
         const name = document.getElementById('procInput').value;
-        if(name) sendCmd(`startApp ${name}`); else alert("Nhập tên!");
+        if(name) sendCmd(`startApp ${name}`); else alert("Input name!");
     }
     function killProcess(pid) {
         if(confirm(`Kill PID ${pid}?`)) sendCmd(`killProcess ${pid}`);
     }
 
     function confirmShutdown() {
-        if(confirm('Bạn có chắc muốn TẮT máy tính này không?')) {
+        if(confirm('ARE YOU SURE TO SHUTDOWN REMOTE PC?')) {
             sendCmd('shutdown');
-            log('Lệnh Shutdown đã gửi...');
+            log('Shutdown sent.');
         }
     }
 
     function confirmRestart() {
-        if(confirm('Bạn có chắc muốn KHỞI ĐỘNG LẠI máy tính này không?')) {
+        if(confirm('ARE YOU SURE TO RESTART REMOTE PC?')) {
             sendCmd('restart');
-            log('Lệnh Restart đã gửi...');
+            log('Restart sent.');
         }
     }
 
@@ -485,7 +626,7 @@
         const val = document.getElementById('chatInput').value;
         if(val) {
             socket.send(val);
-            log("Me: " + val);
+            log("ME: " + val);
             document.getElementById('chatInput').value = '';
         }
     }
@@ -493,7 +634,7 @@
     function log(msg) {
         const div = document.createElement('div');
         div.style.marginBottom = "5px";
-        div.style.borderBottom = "1px solid #eee";
+        div.style.borderBottom = "1px dashed #333";
         div.innerText = msg;
         document.getElementById('chat-content').prepend(div);
     }
@@ -503,16 +644,16 @@
         const txt = document.getElementById('status-text');
         if(isOnline) {
             dot.classList.add('online');
-            txt.innerText = "Connected";
-            txt.style.color = "green";
+            txt.innerText = "CONNECTED";
+            txt.style.color = "#00e436";
         } else {
             dot.classList.remove('online');
-            txt.innerText = "Disconnected";
-            txt.style.color = "red";
+            txt.innerText = "DISCONNECTED";
+            txt.style.color = "#ff2a6d";
         }
     }
 
-    // --- LOGIC MODAL ZOOM ---
+    // --- MODAL & MISC ---
     function openModal() {
         const modal = document.getElementById("imgModal");
         const sourceImg = document.getElementById("screen-img");
@@ -530,100 +671,66 @@
         if (event.target == document.getElementById("imgModal")) closeModal();
     }
 
-    // --- SAVE SCREENSHOT ---
     function saveScreenshot() {
         const img = document.getElementById('screen-img');
         if (!img.src || !img.src.startsWith("data:image")) {
-            alert("Chưa có ảnh. Vui lòng chụp ảnh trước!");
+            alert("No image captured!");
             return;
         }
-        
-        // Tạo canvas để chuyển đổi từ base64 sang PNG
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         const tempImg = new Image();
-        
         tempImg.onload = function() {
             canvas.width = tempImg.width;
             canvas.height = tempImg.height;
             ctx.drawImage(tempImg, 0, 0);
-            
-            // Chuyển đổi canvas sang blob PNG
             canvas.toBlob(function(blob) {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'screenshot_' + new Date().getTime() + '.png';
+                a.download = 'SCREEN_' + new Date().getTime() + '.png';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                log("✓ Ảnh đã được lưu dưới dạng PNG.");
+                log("✓ Saved PNG.");
             }, 'image/png');
         };
-        
         tempImg.src = img.src;
     }
-    // --- VIDEO PLAYER LOGIC ---
-    let videoFrames = []; // Mảng chứa toàn bộ frame ảnh
+
+    // --- VIDEO PLAYER ---
+    let videoFrames = [];
     let isPlaying = false;
     let currentFrameIdx = 0;
     let playInterval = null;
-    const FPS = 30; // Tốc độ chiếu (phải khớp với Server)
-
-    // Cập nhật socket.onmessage để hứng type 'video_stream'
-    // Tìm đoạn socket.onmessage cũ và thêm else if này vào:
-    /*
-    else if (json.type === 'video_stream') {
-        document.getElementById('loading-cam').style.display = 'none';
-        document.getElementById('cam-status').style.display = 'none';
-        
-        // Load dữ liệu vào Player
-        loadVideoPlayer(json.data);
-        log("Đã nhận video (" + json.data.length + " frames).");
-    }
-    */
+    const FPS = 30;
 
     function loadVideoPlayer(frames) {
         if (!frames || frames.length === 0) {
-            log("❌ Lỗi: Không có frames để hiển thị");
+            log("❌ Err: No frames");
             document.getElementById('video-player-container').classList.add('hidden');
             return;
         }
-        
         videoFrames = frames;
         currentFrameIdx = 0;
-        
         const player = document.getElementById('video-player-container');
-        if (player) {
-            player.classList.remove('hidden');
-        }
+        if (player) player.classList.remove('hidden');
         
-        // Cập nhật thanh trượt
         const seeker = document.getElementById('video-seeker');
-        if (seeker) {
-            seeker.max = frames.length - 1;
-            seeker.value = 0;
-        }
+        if (seeker) { seeker.max = frames.length - 1; seeker.value = 0; }
 
-        // Hiển thị frame đầu tiên
         showFrame(0);
-        
-        // Tự động play
         playVideo();
     }
 
     function showFrame(index) {
         if (!videoFrames || videoFrames.length === 0) return;
         if (index < 0 || index >= videoFrames.length) return;
-        
         const img = document.getElementById('video-screen');
         if (!img) return;
-        
-        // Gán ảnh JPEG Base64
         img.src = "data:image/jpeg;base64," + videoFrames[index];
         
-        // Cập nhật UI
         document.getElementById('video-seeker').value = index;
         document.getElementById('frame-counter').innerText = `${index + 1}/${videoFrames.length}`;
         currentFrameIdx = index;
@@ -633,17 +740,13 @@
         if (isPlaying) return;
         isPlaying = true;
         document.getElementById('replay-overlay').style.display = 'none';
-
-        // Nếu đang ở cuối video thì tua về đầu
-        if (currentFrameIdx >= videoFrames.length - 1) {
-            currentFrameIdx = 0;
-        }
+        if (currentFrameIdx >= videoFrames.length - 1) currentFrameIdx = 0;
 
         playInterval = setInterval(() => {
             currentFrameIdx++;
             if (currentFrameIdx >= videoFrames.length) {
-                pauseVideo(); // Hết video thì dừng
-                document.getElementById('replay-overlay').style.display = 'flex'; // Hiện nút Replay
+                pauseVideo();
+                document.getElementById('replay-overlay').style.display = 'flex';
             } else {
                 showFrame(currentFrameIdx);
             }
@@ -655,31 +758,16 @@
         clearInterval(playInterval);
     }
 
-    function seekVideo(val) {
-        pauseVideo(); // Dừng chạy tự động khi đang kéo
-        showFrame(parseInt(val));
-    }
+    document.getElementById('video-seeker').addEventListener('input', function() {
+        pauseVideo();
+        showFrame(parseInt(this.value));
+    });
 
-    // --- SỬA LẠI SENDCMD CHO WEBCAM ---
-    // (Tìm hàm sendCmd cũ và sửa đoạn if get_cam)
-    /*
-    if (cmd === 'get_cam') {
-        document.getElementById('loading-cam').style.display = 'block';
-        document.getElementById('video-player-container').classList.add('hidden'); // Ẩn player cũ
-        document.getElementById('cam-status').style.display = 'none';
-    }
-    */
     async function exportAndDownload() {
-        if (!videoFrames.length) { alert("Chưa có video!"); return; }
-
-        // Prefer toolbar save button; fallback to event.target if available
+        if (!videoFrames.length) { alert("No video data!"); return; }
         let btn = document.getElementById('btn-save-video');
-        let hadBtn = true;
-        if (!btn) {
-            try { btn = event ? event.target : null; hadBtn = !!btn; } catch { hadBtn = false; }
-        }
-        let oldText = hadBtn ? (btn.innerText || '') : '';
-        if (hadBtn) { btn.innerText = "⏳ Tạo file..."; btn.disabled = true; }
+        let oldText = btn.innerText;
+        btn.innerText = "⏳ PROCESSING..."; btn.disabled = true;
 
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
@@ -696,11 +784,10 @@
             const blob = new Blob(chunks, { type: 'video/webm' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = `webcam_${Date.now()}.webm`;
+            a.href = url; a.download = `WEBCAM_${Date.now()}.webm`;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            if (hadBtn && btn) { btn.innerText = oldText; btn.disabled = false; }
+            btn.innerText = oldText; btn.disabled = false;
         };
-
         recorder.start();
         for (let i = 0; i < videoFrames.length; i++) {
             await new Promise(resolve => {
@@ -713,11 +800,8 @@
         recorder.stop();
     }
 
-    // Prevent space key from activating buttons
     document.addEventListener('keydown', function(e) {
-        if (e.code === 'Space' && e.target.tagName === 'BUTTON') {
-            e.preventDefault();
-        }
+        if (e.code === 'Space' && e.target.tagName === 'BUTTON') e.preventDefault();
     }, true);
 
     window.onload = connect;
