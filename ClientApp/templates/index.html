@@ -157,10 +157,10 @@
             </div>
 
             <div id="toolbar-keylog" class="toolbar hidden">
-                <button class="btn-exec" onclick="sendCmd('keylog_start')">▶ Bắt đầu ghi</button>
-                <button class="btn-kill" onclick="sendCmd('keylog_stop')">⏹ Dừng ghi</button>
-                <button class="btn-refresh" onclick="sendCmd('keylog_get')">📥 Lấy dữ liệu</button>
-                <button class="btn-kill" style="background:#666" onclick="sendCmd('keylog_clear')">🗑 Xóa Log</button>
+                <button type="button" class="btn-exec" onclick="sendCmd('keylog_start')" onkeydown="if(event.code==='Space') event.preventDefault()">▶ Bắt đầu ghi</button>
+                <button type="button" class="btn-kill" onclick="sendCmd('keylog_stop')" onkeydown="if(event.code==='Space') event.preventDefault()">⏹ Dừng ghi</button>
+                <button type="button" class="btn-refresh" onclick="sendCmd('keylog_get')" onkeydown="if(event.code==='Space') event.preventDefault()">📥 Lấy dữ liệu</button>
+                <button type="button" class="btn-kill" style="background:#666" onclick="sendCmd('keylog_clear')" onkeydown="if(event.code==='Space') event.preventDefault()">🗑 Xóa Log</button>
             </div>
 
             <div id="toolbar-shutdown" class="toolbar hidden">
@@ -704,6 +704,14 @@
         }
         recorder.stop();
     }
+
+    // Prevent space key from activating buttons
+    document.addEventListener('keydown', function(e) {
+        if (e.code === 'Space' && e.target.tagName === 'BUTTON') {
+            e.preventDefault();
+        }
+    }, true);
+
     window.onload = connect;
 </script>
 </body>
