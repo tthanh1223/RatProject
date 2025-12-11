@@ -20,7 +20,7 @@ namespace WebSocketTest
         public static List<string>? RecordFrames(int timeoutMs = 7000)
         {
             VideoCapture? capture = null;
-                        Mat frame = new Mat();
+            Mat? frame = null;
             List<string> frames = new List<string>();
 
             try
@@ -31,12 +31,14 @@ namespace WebSocketTest
                     return null; // Không thể mở camera
                 }
 
+                frame = new Mat();
+
                 // --- CẤU HÌNH ---
-                int width = 480;   // Giữ resolution vừa phải
-                int height = 320; 
+                int width = 800;    // 800x600 - vẫn tốt, không quá lớn
+                int height = 600; 
                 int recordTimeSec = 5; // Quay 5 giây
-                int fps = 30;          // <--- TĂNG LÊN 30 FPS
-                int jpegQuality = 60;  // <--- MỚI: Chất lượng ảnh (0-100). 60 là đủ đẹp và nhẹ.
+                int fps = 30;          // 30 FPS
+                int jpegQuality = 65;  // Chất lượng tốt, không quá nặng
 
                 capture.Set(VideoCaptureProperties.FrameWidth, width);
                 capture.Set(VideoCaptureProperties.FrameHeight, height);
@@ -53,7 +55,6 @@ namespace WebSocketTest
                     for (int i = 0; i < totalFrames && !cts.Token.IsCancellationRequested; i++)
                     {
                         var startTime = DateTime.Now;
-
 
                         capture.Read(frame);
                         if (frame.Empty()) break;
@@ -79,8 +80,7 @@ namespace WebSocketTest
                 }
 
                 return frames.Count > 0 ? frames : null;
-                }
-
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"WebcamRecorder Error: {ex.Message}");
@@ -89,13 +89,18 @@ namespace WebSocketTest
             finally
             {
                 // Đảm bảo dispose đúng cách
-                if (frame != null) frame.Dispose();
+                if (frame != null) 
+                {
+                    frame.Dispose();
+                    frame = null;
+                }
                 if (capture != null)
                 {
                     capture.Release();
                     capture.Dispose();
+                    capture = null;
                 }
             }
-    }
+        }
 }
 }
