@@ -105,6 +105,7 @@
 
             <div id="toolbar-screen" class="toolbar hidden">
                 <button class="btn-refresh" onclick="sendCmd('get_screen')">📸 Chụp ngay</button>
+                <button class="btn-exec" onclick="saveScreenshot()">💾 Lưu ảnh PNG</button>
                 <div style="flex:1"></div>
                 <span style="color:#666; font-size:13px">Ảnh được nén JPEG.</span>
             </div>
@@ -398,6 +399,41 @@
     }
     window.onclick = function(event) {
         if (event.target == document.getElementById("imgModal")) closeModal();
+    }
+
+    // --- SAVE SCREENSHOT ---
+    function saveScreenshot() {
+        const img = document.getElementById('screen-img');
+        if (!img.src || !img.src.startsWith("data:image")) {
+            alert("Chưa có ảnh. Vui lòng chụp ảnh trước!");
+            return;
+        }
+        
+        // Tạo canvas để chuyển đổi từ base64 sang PNG
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const tempImg = new Image();
+        
+        tempImg.onload = function() {
+            canvas.width = tempImg.width;
+            canvas.height = tempImg.height;
+            ctx.drawImage(tempImg, 0, 0);
+            
+            // Chuyển đổi canvas sang blob PNG
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'screenshot_' + new Date().getTime() + '.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                log("✓ Ảnh đã được lưu dưới dạng PNG.");
+            }, 'image/png');
+        };
+        
+        tempImg.src = img.src;
     }
 
     window.onload = connect;
