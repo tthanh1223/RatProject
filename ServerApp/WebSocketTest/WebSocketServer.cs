@@ -15,6 +15,8 @@ namespace WebSocketTest
         private HttpListener? _listener;
         private Action<string> _logger;
         private WebSocket? _currentSocket;
+        private bool _isRunning = false;
+        private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1); // Đồng bộ SendAsync
 
         public SimpleWebSocketServer(Action<string> loggerMethod)
         {
@@ -26,6 +28,7 @@ namespace WebSocketTest
             _listener = new HttpListener();
             _listener.Prefixes.Add(url);
             _listener.Start();
+            _isRunning = true;
             _logger($"Server đã khởi động tại: {url}");
 
             try
@@ -39,6 +42,18 @@ namespace WebSocketTest
             }
             catch (Exception ex) { _logger("Lỗi Server: " + ex.Message); }
         }
+
+        public void Stop()
+        {
+            _isRunning = false;
+            if (_listener != null && _listener.IsListening)
+            {
+                _listener.Stop();
+                _listener.Close();
+                _logger("Server đã dừng");
+            }
+        }
+        
 
         private async Task ProcessClient(HttpListenerContext context)
         {
