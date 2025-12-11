@@ -33,7 +33,7 @@ namespace WebSocketTest
 
             try
             {
-                while (_listener.IsListening)
+                while (_listener.IsListening && _isRunning)
                 {
                     var context = await _listener.GetContextAsync();
                     if (context.Request.IsWebSocketRequest) _ = ProcessClient(context);
@@ -62,7 +62,7 @@ namespace WebSocketTest
             _logger("Client đã kết nối!");
             await SendToClient(JsonInfo("Server Ready"));
 
-            byte[] buffer = new byte[1024 * 500]; // Tăng buffer lớn vì list process rất dài
+            byte[] buffer = new byte[1024 * 1024]; // 1MB buffer cho dữ liệu lớn
 
             try
             {
