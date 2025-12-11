@@ -78,8 +78,29 @@ namespace WebSocketTest
                     await SendToClient(response);
                 }
             }
+            catch (OperationCanceledException) { _logger("Client timeout hoặc disconnect"); }
+            catch (WebSocketException ex) { _logger($"WebSocket error: {ex.Message}"); }
             catch (Exception ex) { _logger("Lỗi kết nối: " + ex.Message); }
-            finally { _currentSocket = null; }
+            finally 
+            { 
+                // Gracefully close WebSocket
+                if (_currentSocket != null)
+                {
+                    try
+                    {
+                        if (_currentSocket.State == WebSocketState.Open)
+                        {
+                            await _currentSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closing", CancellationToken.None);
+                        }
+                    }
+                    catch { }
+                    finally
+                    {
+                        _currentSocket.Dispose();
+                        _currentSocket = null;
+                    }
+                }
+            }
         }
 
         public async Task SendToClient(string msg)
@@ -87,7 +108,116 @@ namespace WebSocketTest
             if (_currentSocket != null && _currentSocket.State == WebSocketState.Open)
             {
                 byte[] bytes = Encoding.UTF8.GetBytes(msg);
-                await _currentSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+                try
+                {
+                    await _sendSemaphore.WaitAsync();
+                    try
+                    {
+                        await _currentSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+                    }
+                    finally
+                    {
+                        _sendSemaphore.Release();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger($"Lỗi gửi: {ex.Message}");
+                }
+            }
+        }
+
+        // Gửi dữ liệu lớn (video, ảnh) thành nhiều chunks
+        public async Task SendLargeData(List<string> frameList, string type)
+        {
+            if (_currentSocket == null || _currentSocket.State != WebSocketState.Open) return;
+
+            try
+            {
+                // Gửi thông báo bắt đầu
+                var startMsg = new { type = type + "_start", count = frameList.Count };
+                await SendToClientAsync(JsonSerializer.Serialize(startMsg));
+
+                // Gửi frames theo batch (30 frames một lần) để tăng tốc độ
+                const int batchSize = 30;
+                for (int batchStart = 0; batchStart < frameList.Count; batchStart += batchSize)
+                {
+                    if (_currentSocket.State != WebSocketState.Open) 
+                    {
+                        _logger($"WebSocket closed at batch {batchStart}/{frameList.Count}");
+                        break;
+                    }
+
+                    int batchEnd = Math.Min(batchStart + batchSize, frameList.Count);
+                    var batch = new List<object>();
+                    
+                    for (int i = batchStart; i < batchEnd; i++)
+                    {
+                        batch.Add(new { index = i, data = frameList[i] });
+                    }
+
+                    try
+                    {
+                        var batchData = new { type = type + "_batch", frames = batch };
+                        string json = JsonSerializer.Serialize(batchData);
+                        byte[] bytes = Encoding.UTF8.GetBytes(json);
+
+                        await _sendSemaphore.WaitAsync();
+                        try
+                        {
+                            await _currentSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+                        }
+                        finally
+                        {
+                            _sendSemaphore.Release();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger($"Lỗi gửi batch {batchStart}-{batchEnd}: {ex.Message}");
+                        break;
+                    }
+                    
+                    // Delay nhỏ giữa batches (không cần delay cho mỗi frame)
+                    if (batchEnd < frameList.Count) await Task.Delay(10);
+                }
+
+                // Gửi thông báo kết thúc (nếu còn connected)
+                if (_currentSocket.State == WebSocketState.Open)
+                {
+                    var endMsg = new { type = type + "_end" };
+                    await SendToClientAsync(JsonSerializer.Serialize(endMsg));
+                    _logger($"Gửi {frameList.Count} frames ({type}) thành công");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger($"Lỗi gửi dữ liệu lớn: {ex.Message}");
+            }
+        }
+
+        // SendToClientAsync dùng semaphore - dùng cho async context
+        private async Task SendToClientAsync(string msg)
+        {
+            if (_currentSocket != null && _currentSocket.State == WebSocketState.Open)
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(msg);
+                try
+                {
+                    await _sendSemaphore.WaitAsync();
+                    try
+                    {
+                        await _currentSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+                    }
+                    finally
+                    {
+                        _sendSemaphore.Release();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger($"Lỗi gửi: {ex.Message}");
+                }
             }
         }
 
@@ -160,37 +290,37 @@ namespace WebSocketTest
                         return JsonSuccess("Lệnh khởi động lại đã được gửi.");   
                     case "get_cam":
                         // Chạy bất đồng bộ để không treo server (timeout 8 giây)
+                        // LỰU socket trước để tránh null khi chạy async
+                        var socket = _currentSocket;
                         _ = Task.Run(async () => 
                         {
                             try
                             {
-                                await SendToClient(JsonInfo("Đang quay video (5s)..."));
+                                // Gửi thông báo bắt đầu
+                                if (socket?.State == WebSocketState.Open)
+                                {
+                                    await SendToClient(JsonInfo("Đang quay video (5s)..."));
+                                }
 
                                 // Gọi hàm mới lấy danh sách frame (timeout 7s)
                                 var frames = WebcamRecorder.RecordFrames(7000);
 
                                 if (frames == null || frames.Count == 0)
                                 {
-                                    await SendToClient(JsonError("Lỗi: Không thể mở Webcam hoặc không ghi được frame nào."));
+                                    if (socket?.State == WebSocketState.Open)
+                                        await SendToClient(JsonError("Lỗi: Không thể mở Webcam hoặc không ghi được frame nào."));
                                 }
                                 else
                                 {
-                                    // Dùng JsonSerializer để escape JSON đúng cách (an toàn hơn)
-                                    var response = new
-                                    {
-                                        type = "video_stream",
-                                        data = frames
-                                    };
-                                    string jsonResponse = JsonSerializer.Serialize(response);
-
-                                    // Gửi cục dữ liệu về client
-                                    await SendToClient(jsonResponse);
-                                    _logger($"Video được gửi ({frames.Count} frames).");
+                                    // Gửi video dưới dạng chunks để tránh disconnect
+                                    if (socket?.State == WebSocketState.Open)
+                                        await SendLargeData(frames, "video");
                                 }
                             }
                             catch (Exception ex)
                             {
-                                await SendToClient(JsonError($"Lỗi camera: {ex.Message}"));
+                                if (socket?.State == WebSocketState.Open)
+                                    await SendToClient(JsonError($"Lỗi camera: {ex.Message}"));
                             }
                         });
                     return JsonInfo("Đang khởi động Camera...");
