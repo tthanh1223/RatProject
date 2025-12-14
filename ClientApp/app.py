@@ -49,6 +49,14 @@ async def api_get_local_ip():
     """
     return get_local_ip()
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    """
+    Dashboard chính - yêu cầu phải có server IP trong session/cookie
+    Nếu không có → redirect về login
+    """
+    return templates.TemplateResponse("index.html", {"request": request})
+
 if __name__ == "__main__":
     local_ip = get_local_ip()
     
