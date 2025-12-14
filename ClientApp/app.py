@@ -1,26 +1,22 @@
 import uvicorn
 import socket
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
-# Mount static files để serve CSS và JS
+# Mount static files
 try:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 except RuntimeError:
-    print("⚠️ Cảnh báo: Chưa tạo thư mục 'static', web có thể lỗi giao diện.")
+    print("⚠️ Cảnh báo: Chưa tạo thư mục 'static'")
 
-# Khai báo thư mục chứa file HTML
 templates = Jinja2Templates(directory="templates")
 
 def get_local_ip():
-    """
-    Hàm này tạo một kết nối giả đến Google DNS để xác định 
-    IP LAN chính xác mà máy đang sử dụng.
-    """
+    """Lấy IP LAN của máy hiện tại"""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(('8.8.8.8', 80))
@@ -32,23 +28,24 @@ def get_local_ip():
     return ip
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def root(request: Request, server: str = None):
     """
-    Main dashboard - hiển thị index.html
+    Main route:
+    - Nếu có query param ?server=IP → render dashboard
+    - Nếu không có → render login page
     """
-    return templates.TemplateResponse("index.html", {"request": request})
+    if server:
+        # Đã có server IP → render dashboard
+        return templates.TemplateResponse("index.html", {"request": request})
+    else:
+        # Chưa có server → render login page
+        return templates.TemplateResponse("login.html", {"request": request})
 
-@app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
+@app.get("/api/get-local-ip", response_class=PlainTextResponse)
+async def api_get_local_ip():
     """
-    Login page - hiển thị login.html
-    """
-    return templates.TemplateResponse("login.html", {"request": request})
-
-@app.get("/api/get-local-ip")
-async def get_ip():
-    """
-    API endpoint để lấy local IP
+    API endpoint để lấy IP của máy client
+    Dùng cho tính năng auto-discover
     """
     return get_local_ip()
 
@@ -57,8 +54,7 @@ if __name__ == "__main__":
     
     print("=" * 60)
     print(f"✅ Web App đang chạy local tại: http://localhost:3000")
-    print(f"🔗 Login page: http://localhost:3000/login")
-    print(f"🔗 Từ máy khác (điện thoại/PC), truy cập: http://{local_ip}:3000/login")
+    print(f"🔗 Từ máy khác, truy cập: http://{local_ip}:3000")
     print("=" * 60)
     
     uvicorn.run(app, host="0.0.0.0", port=3000)
