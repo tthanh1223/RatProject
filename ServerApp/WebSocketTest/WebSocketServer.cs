@@ -342,43 +342,55 @@ namespace WebSocketTest
                         return JsonInfo("Listing directory...");
 
                     case "download_file":
-                        // arg = path
                         var dlSocket = _currentSocket;
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
+                        _ = Task.Run(async () => {
+                            try {
+                                _logger($"[DOWNLOAD] Request for: {arg}");
                                 var meta = await _fileManager.GetFileMetadataAsync(arg);
+                                
                                 if (dlSocket?.State != WebSocketState.Open) return;
-
+                                
                                 var start = new { type = "file_start", path = arg, size = meta.Size, contentType = meta.ContentType };
+                                _logger($"[DOWNLOAD] Sending file_start: {JsonSerializer.Serialize(start)}");
                                 await SendToClientAsync(JsonSerializer.Serialize(start));
-
+                                
                                 await using var fs = await _fileManager.GetFileStreamAsync(arg);
                                 byte[] buffer = new byte[64 * 1024];
                                 int read;
                                 int index = 0;
-                                while ((read = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                                {
-                                    if (dlSocket?.State != WebSocketState.Open) break;
+                                int totalChunks = 0;
+                                
+                                while ((read = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0) {
+                                    if (dlSocket?.State != WebSocketState.Open) {
+                                        _logger($"[DOWNLOAD] Connection closed at chunk {index}");
+                                        break;
+                                    }
+                                    
                                     string b64 = Convert.ToBase64String(buffer, 0, read);
-                                    var chunk = new { type = "file_chunk", index = index++, data = b64 };
+                                    var chunk = new { type = "file_chunk", index = index, path = arg, data = b64 };
+                                    _logger($"[DOWNLOAD] Sending chunk {index}: {read} bytes, base64 length: {b64.Length}");
                                     await SendToClientAsync(JsonSerializer.Serialize(chunk));
+                                    index++;
+                                    totalChunks++;
+                                    
+                                    if (totalChunks % 10 == 0) {
+                                        _logger($"[DOWNLOAD] Sent {totalChunks} chunks for {arg}");
+                                    }
                                 }
-
-                                if (dlSocket?.State == WebSocketState.Open)
-                                {
-                                    var end = new { type = "file_end", path = arg };
+                                
+                                if (dlSocket?.State == WebSocketState.Open) {
+                                    var end = new { type = "file_end", path = arg, totalChunks = totalChunks };
+                                    _logger($"[DOWNLOAD] Sending file_end: {totalChunks} chunks");
                                     await SendToClientAsync(JsonSerializer.Serialize(end));
                                 }
                             }
-                            catch (Exception ex)
-                            {
-                                if (dlSocket?.State == WebSocketState.Open) await SendToClientAsync(JsonError("Download error: " + ex.Message));
+                            catch (Exception ex) {
+                                _logger($"[DOWNLOAD] Error: {ex.Message}");
+                                if (dlSocket?.State == WebSocketState.Open) 
+                                    await SendToClientAsync(JsonError($"Download error: {ex.Message}"));
                             }
                         });
                         return JsonInfo("Starting download...");
-
                     default:
                         if (cmd == "PING") return "PONG";
                         return command;

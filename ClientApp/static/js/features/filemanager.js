@@ -138,60 +138,99 @@ export class FileManagerManager {
     }
 
     downloadFile(filePath, fileName) {
-        this.logger.log(`[FILES] Downloading: ${fileName}`);
-        this.downloadingFiles.set(filePath, {
+        // Normalize path trước khi lưu
+        const normalizedPath = this.normalizePath(filePath);
+        
+        this.logger.log(`[FILES] Downloading: ${fileName} from ${normalizedPath}`);
+        this.downloadingFiles.set(normalizedPath, {
             fileName: fileName,
             chunks: [],
-            size: 0
+            size: 0,
+            originalPath: filePath  // Lưu đường dẫn gốc để debug
         });
         this.ws.send(`download_file ${filePath}`);
     }
 
+    normalizePath(path) {
+        // Chuẩn hóa: chuyển / → \, trim trailing slash
+        if (!path) return '';
+        return path
+            .replace(/\//g, '\\')
+            .replace(/\\+/g, '\\')
+            .toUpperCase();  // Windows path case-insensitive
+    }
+
     onFileDownloadStart(data) {
         const { path, size, contentType } = data;
+        const normalizedPath = this.normalizePath(path);
+        
+        console.log('[DEBUG] file_start received:', { path, size, contentType });
+        console.log('[DEBUG] Normalized path:', normalizedPath);
         this.logger.log(`[FILES] Download start: ${path} (${this.formatSize(size)})`);
         
-        if (this.downloadingFiles.has(path)) {
-            this.downloadingFiles.get(path).size = size;
-            this.downloadingFiles.get(path).contentType = contentType;
+        if (this.downloadingFiles.has(normalizedPath)) {
+            console.log('[DEBUG] File found in map, updating...');
+            this.downloadingFiles.get(normalizedPath).size = size;
+            this.downloadingFiles.get(normalizedPath).contentType = contentType;
+        } else {
+            console.warn('[DEBUG] File NOT found in map:', normalizedPath);
+            console.log('[DEBUG] Available keys:', Array.from(this.downloadingFiles.keys()));
         }
     }
 
     onFileChunkReceived(data) {
         const { path, index, data: b64Data } = data;
-
-        if (!this.downloadingFiles.has(path)) {
-            this.logger.log(`[FILES] Received chunk for unknown file: ${path}`);
+        const normalizedPath = this.normalizePath(path);
+        
+        console.log('[DEBUG] Normalized path:', path, '->', normalizedPath);
+        
+        if (!this.downloadingFiles.has(normalizedPath)) {
+            console.warn('[DEBUG] Path not found. Looking for:', normalizedPath);
+            console.log('[DEBUG] Available paths:', Array.from(this.downloadingFiles.keys()));
             return;
         }
-
-        const fileInfo = this.downloadingFiles.get(path);
-        if (!fileInfo.chunks[index]) {
-            fileInfo.chunks[index] = b64Data;
-        }
-
-        const received = Object.keys(fileInfo.chunks).length;
-        this.logger.log(`[FILES] Chunk ${index + 1} received (total: ${received})`);
+        
+        const fileInfo = this.downloadingFiles.get(normalizedPath);
+        fileInfo.chunks[index] = b64Data;
     }
 
     onFileDownloadEnd(data) {
         const { path } = data;
-
-        if (!this.downloadingFiles.has(path)) {
-            this.logger.log(`[FILES] Download end for unknown file: ${path}`);
+        const normalizedPath = this.normalizePath(path);
+        
+        console.log('[DEBUG] file_end received for:', path);
+        console.log('[DEBUG] Normalized path:', normalizedPath);
+        console.log('[DEBUG] Available keys in map:', Array.from(this.downloadingFiles.keys()));
+        
+        if (!this.downloadingFiles.has(normalizedPath)) {
+            this.logger.log(`[FILES] Download end but file not found: ${path}`);
+            console.warn('[DEBUG] Path mismatch! Received:', normalizedPath, 'Available:', Array.from(this.downloadingFiles.keys()));
             return;
         }
-
-        const fileInfo = this.downloadingFiles.get(path);
-        const chunks = fileInfo.chunks.filter(c => c); // remove undefined
-
-        this.logger.log(`[FILES] Download complete: ${fileInfo.fileName} (${chunks.length} chunks)`);
-
-        // Reconstruct file from base64 chunks
+        
+        const fileInfo = this.downloadingFiles.get(normalizedPath);
+        console.log('[DEBUG] File info found:', { fileName: fileInfo.fileName, chunksLength: fileInfo.chunks.length });
+        
+        // Xây dựng mảng chunks đúng (loại bỏ undefined)
+        const chunks = [];
+        for (let i = 0; i < fileInfo.chunks.length; i++) {
+            if (fileInfo.chunks[i]) {
+                chunks.push(fileInfo.chunks[i]);
+            } else {
+                console.warn(`[DEBUG] Missing chunk at index ${i}`);
+            }
+        }
+        
+        console.log('[DEBUG] Final chunks count:', chunks.length, 'raw array length:', fileInfo.chunks.length);
+        this.logger.log(`[FILES] Download complete: ${fileInfo.fileName} (${chunks.length} chunks, raw array: ${fileInfo.chunks.length})`);
+        
+        if (chunks.length === 0) {
+            this.logger.log(`[FILES] ERROR: No chunks received! Check server logs.`);
+            return;
+        }
+        
         this.downloadFileFromChunks(fileInfo.fileName, chunks);
-
-        // Cleanup
-        this.downloadingFiles.delete(path);
+        this.downloadingFiles.delete(normalizedPath);
     }
 
     downloadFileFromChunks(fileName, chunks) {
