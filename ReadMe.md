@@ -38,6 +38,8 @@ Anh em có code gì thì nhớ pull về sửa commit, branch main luôn không 
 #TODO:
 - [ ] Fix logic keylog theo session
 - [ ] Fix logic webcam theo duration (in-memory size)
-- [ ] Tạo UI cho Power
-- [ ] Tạo login test 2 máy
+- [ ] Tạo UI cho Power: 2 nút Shutdown với Restart to đùng
+- [x] Tạo login test 2 máy (đã test được trên 2 máy - nhưng còn hơi phức tạo) => 
+- [ ] Tạo file bat chạy cho phía Server
+- [ ] Xóa tính năng Auto Discovery trong login page
 - [ ] Modulize lại ServerApp
