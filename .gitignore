@@ -53,6 +53,4 @@ env/
 # ==========================
 # Others
 # ==========================
-pressed_keys.txt
-keylogger.cpp
-keylogger.exe
+fileKeyLog.txt

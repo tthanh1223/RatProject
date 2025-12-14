@@ -34,6 +34,7 @@
         <div class="tab" data-tab="keylog">⌨️ KEYS</div>
         <div class="tab" data-tab="shutdown">🔌 POWER</div>
         <div class="tab" data-tab="webcam">📹 CAM</div>
+        <div class="tab" data-tab="files">📁 FILES</div>
     </div>
     
     <!-- Main Content -->
@@ -74,20 +75,21 @@
                 <button type="button" class="btn-dark" id="btn-keylog-clear">🗑 CLEAR</button>
             </div>
 
-            <!-- Toolbar: Shutdown -->
-            <div id="toolbar-shutdown" class="toolbar hidden">
-                <button class="btn-kill" id="btn-shutdown">🔴 SHUTDOWN</button>
-                <button class="btn-refresh" style="background: #fd7e14; color:white;" id="btn-restart">🔄 RESTART</button>
-                <div class="spacer"></div>
-                <span style="color:#d00; font-weight:bold;">⚠️ DANGER ZONE</span>
-            </div>
-
             <!-- Toolbar: Webcam -->
             <div id="toolbar-webcam" class="toolbar hidden">
                 <button class="btn-refresh" id="btn-record-webcam">📹 REC 5s</button>
                 <button id="btn-save-video" class="btn-exec">💾 SAVE VID</button>
                 <div class="spacer"></div>
                 <span style="color:#555">[WEBCAM STREAM]</span>
+            </div>
+
+            <!-- Toolbar: File Manager -->
+            <div id="toolbar-files" class="toolbar hidden">
+                <input type="text" id="pathInput" placeholder="Path (ex: C:\)" value="C:\">
+                <button class="btn-exec" id="btn-open-path">📂 OPEN</button>
+                <button class="btn-refresh" id="btn-refresh-files">🔄 Refresh</button>
+                <div class="spacer"></div>
+                <span id="current-path-display" style="color:#555; font-size:14px;">C:\</span>
             </div>
 
             <!-- View: Keylogger -->
@@ -157,6 +159,46 @@
                     </thead>
                     <tbody id="tbody-processes"></tbody>
                 </table>
+            </div>
+
+            <!-- View: Power -->
+            <div id="view-shutdown" class="hidden" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;">
+    
+    <div style="text-align: center; margin-bottom: 40px;">
+        <span style="color: red; font-size: 40px; font-weight: bold; font-family: 'VT323', monospace;">⚠️ DANGER ZONE</span>
+    </div>
+
+    <div style="display: flex; flex-direction: row; justify-content: center; gap: 40px; width: 100%;">
+        
+        <button id="btn-shutdown" class="btn-kill" style="width: 280px; height: 160px; font-family: 'VT323', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; cursor: pointer; border-radius: 0px;">
+            
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+
+            <span style="font-size: 45px; line-height: 1;">SHUTDOWN</span>
+        </button>
+
+        <button id="btn-restart" class="btn-refresh" style="width: 280px; height: 160px; background: #fd7e14; color: white; font-family: 'VT323', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; cursor: pointer; border-radius: 0px;">
+            
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+
+            <span style="font-size: 45px; line-height: 1;">RESTART</span>
+        </button>
+
+    </div>
+</div>
+            
+            <!-- View: File Manager -->
+            <div id="view-files" class="hidden scroll-area">
+                <div id="file-list-container" style="padding: 15px;">
+                    <!-- File list will be dynamically inserted here -->
+                </div>
             </div>
         </div>
 

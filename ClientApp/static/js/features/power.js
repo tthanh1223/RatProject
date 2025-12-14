@@ -3,30 +3,43 @@ export class PowerManager {
         this.ws = ws;
         this.logger = logger;
         
-        this.setupListeners();
+        // Lấy đúng ID mà bạn đã đặt trong view-shutdown mới
+        this.btnShutdown = document.getElementById('btn-shutdown');
+        this.btnRestart = document.getElementById('btn-restart');
+
+        this.init();
     }
 
-    setupListeners() {
-        document.getElementById('btn-shutdown').addEventListener('click', () => {
-            this.shutdown();
-        });
+    init() {
+        if (this.btnShutdown) {
+            this.btnShutdown.addEventListener('click', () => {
+                this.confirmAction('shutdown');
+            });
+        }
 
-        document.getElementById('btn-restart').addEventListener('click', () => {
-            this.restart();
-        });
-    }
-
-    shutdown() {
-        if (confirm('ARE YOU SURE TO SHUTDOWN REMOTE PC?')) {
-            this.ws.send('shutdown');
-            this.logger.log('Shutdown sent.');
+        if (this.btnRestart) {
+            this.btnRestart.addEventListener('click', () => {
+                this.confirmAction('restart');
+            });
         }
     }
 
-    restart() {
-        if (confirm('ARE YOU SURE TO RESTART REMOTE PC?')) {
-            this.ws.send('restart');
-            this.logger.log('Restart sent.');
+    confirmAction(action) {
+        // Hỏi lại cho chắc vì nút to quá dễ bấm nhầm
+        const msg = action === 'shutdown' ? 'Tắt máy' : 'Khởi động lại';
+        if (confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn ${msg} máy nạn nhân không?`)) {
+            this.sendCommand(action);
         }
+    }
+
+    sendCommand(action) {
+        // Gửi lệnh JSON về Server
+        // Server C# sẽ nhận: {"type": "power", "action": "shutdown"}
+        this.ws.send(JSON.stringify({
+            type: 'power',
+            action: action
+        }));
+        
+        this.logger.log(`🔌 Đã gửi lệnh: ${action.toUpperCase()}`);
     }
 }

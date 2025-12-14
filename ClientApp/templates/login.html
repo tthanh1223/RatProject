@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAT - Connection</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">📡 REMOTE CONTROLLER</div>
+        <div class="subtitle">CONNECTION SETUP</div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="serverAddress">SERVER ADDRESS</label>
+                <input 
+                    type="text" 
+                    id="serverAddress" 
+                    placeholder="192.168.1.100:8080"
+                    pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}$"
+                    required
+                >
+                <div class="helper-text">Format: IP:PORT (ví dụ: 192.168.1.50:8080)</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btnConnect">
+                ▶ CONNECT TO SERVER
+            </button>
+
+        </form>
+
+        <div class="status" id="status"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const input = document.getElementById('serverAddress');
+        const btnDiscover = document.getElementById('btnDiscover');
+        const status = document.getElementById('status');
+
+        // ===== VALIDATE IP:PORT =====
+        function validateAddress(address) {
+            const regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):([0-9]{1,5})$/;
+            const match = address.match(regex);
+            if (!match) return null;
+            
+            const port = parseInt(match[1]);
+            if (port < 1 || port > 65535) return null;
+            
+            return address;
+        }
+
+        // ===== HIỂN THỊ STATUS =====
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = 'status ' + type;
+            status.style.display = 'block';
+        }
+
+        // ===== THỬ KẾT NỐI WEBSOCKET =====
+        async function testConnection(address) {
+            return new Promise((resolve, reject) => {
+                const ws = new WebSocket(`ws://${address}/`);
+                let isHandshakeReceived = false;
+                
+                const timeout = setTimeout(() => {
+                    if (!isHandshakeReceived) {
+                        ws.close();
+                        reject(new Error('Timeout: Server không phản hồi'));
+                    }
+                }, 5000);
+
+                ws.onopen = () => {
+                    showStatus('Đang chờ xác thực từ server...', 'info');
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        // Kiểm tra handshake từ server
+                        if (data.type === 'handshake' && data.server_name === 'RAT_SERVER_V1.0') {
+                            clearTimeout(timeout);
+                            isHandshakeReceived = true;
+                            ws.close();
+                            resolve(true);
+                        }
+                    } catch (e) {
+                        // Không phải JSON hoặc không đúng format
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    clearTimeout(timeout);
+                    ws.close();
+                    reject(new Error('Không thể kết nối tới server'));
+                };
+
+                ws.onclose = () => {
+                    clearTimeout(timeout);
+                    if (!isHandshakeReceived) {
+                        reject(new Error('Server đóng kết nối không mong muốn'));
+                    }
+                };
+            });
+        }
+
+        // ===== XỬ LÝ FORM SUBMIT =====
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const address = input.value.trim();
+            
+            if (!validateAddress(address)) {
+                showStatus('❌ Địa chỉ không hợp lệ! Format: IP:PORT', 'error');
+                return;
+            }
+
+            btnConnect.disabled = true;
+            btnConnect.textContent = '⏳ CONNECTING...';
+            showStatus('Đang kết nối tới ' + address + '...', 'info');
+
+            try {
+                await testConnection(address);
+                showStatus('✅ Kết nối thành công!', 'success');
+                
+                // Chuyển sang dashboard sau 1 giây
+                setTimeout(() => {
+                    window.location.href = `/?server=${address.split(':')[0]}`;
+                }, 1000);
+                
+            } catch (error) {
+                showStatus('❌ ' + error.message, 'error');
+                btnConnect.disabled = false;
+                btnConnect.textContent = '▶ CONNECT TO SERVER';
+            }
+        });
+
+
+        // Focus input khi load trang
+        input.focus();
+    </script>
+</body>
+</html>
