@@ -40,8 +40,8 @@ Anh em có code gì thì nhớ pull về sửa commit, branch main luôn không 
 - [ ] Xóa tính năng Auto Discovery trong login page
 - [ ] Tạo UI cho Power: 2 nút Shutdown với Restart to đùng
 - Server Side
-- [ ] Fix logic keylog theo session
-- [ ] Fix logic webcam theo duration (in-memory size)
+- [x] Fix logic keylog theo session
+- [x] Fix logic webcam theo duration (in-memory size)
 - [x] Tạo login test 2 máy (đã test được trên 2 máy - nhưng còn hơi phức tạo) => 
 - [ ] Tạo file bat chạy cho phía Server
-- [ ] Modulize lại ServerApp
+- [x] Modulize lại ServerApp
