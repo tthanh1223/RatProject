@@ -9,30 +9,36 @@ import { ScreenCaptureManager } from './features/screen.js';
 import { KeyloggerManager } from './features/keylogger.js';
 import { WebcamManager } from './features/webcam.js';
 import { PowerManager } from './features/power.js';
+import { FileManagerManager } from './features/filemanager.js';
 import { parseQueryString, preventSpaceKeyOnButtons } from './utils/helpers.js';
 
 class Application {
     constructor() {
         // ✅ LẤY SERVER IP TỪ URL PARAMS
         const urlParams = new URLSearchParams(window.location.search);
-        const serverIP = urlParams.get('server');
+        let serverIP = urlParams.get('server');
         
+        // ✅ NẾU KHÔNG CÓ SERVER PARAM → MẶC ĐỊNH DÙNG LOCALHOST (để test)
         if (!serverIP) {
-            // Không có server IP → redirect về login
-            window.location.href = '/';
-            return;
+            console.warn('⚠️ Không có server param, dùng localhost để test');
+            serverIP = 'localhost';
+            
+            // ✅ TÙY CHỌN: Có thể redirect về login nếu muốn bắt buộc người dùng nhập
+            // Uncomment dòng dưới nếu muốn bắt buộc phải có ?server= param
+            // window.location.href = '/';
+            // return;
         }
         
-        // Kiểm tra format IP
-        if (!this.isValidIP(serverIP)) {
-            alert('Invalid server IP format!');
+        // ✅ Kiểm tra format IP (bỏ qua kiểm tra nếu là localhost)
+        if (serverIP !== 'localhost' && !this.isValidIP(serverIP)) {
+            alert('❌ Invalid server IP format!\n\nVí dụ đúng: 192.168.1.100\n\nĐang redirect về login page...');
             window.location.href = '/';
             return;
         }
 
-        // Construct WebSocket URL với IP từ login
+        // ✅ Construct WebSocket URL
         const wsUrl = `ws://${serverIP}:8080/`;
-        console.log(`Connecting to: ${wsUrl}`);
+        console.log(`🔗 Connecting to: ${wsUrl}`);
         
         // Initialize core services
         this.ws = new WebSocketManager(wsUrl);
@@ -74,17 +80,25 @@ class Application {
             this.status.setOffline();
             this.logger.log('❌ Disconnected from server');
             
-            // ✅ TỰ ĐỘNG REDIRECT VỀ LOGIN SAU 3 GIÂY
-            setTimeout(() => {
-                if (confirm('Connection lost. Return to login page?')) {
-                    window.location.href = '/';
-                }
-            }, 3000);
+            // ✅ TỰ ĐỘNG REDIRECT VỀ LOGIN SAU 5 GIÂY (chỉ khi không phải localhost)
+            const urlParams = new URLSearchParams(window.location.search);
+            const serverIP = urlParams.get('server');
+            
+            if (serverIP && serverIP !== 'localhost') {
+                setTimeout(() => {
+                    if (confirm('❌ Connection lost. Return to login page?')) {
+                        window.location.href = '/';
+                    }
+                }, 5000);
+            }
         });
 
         // Handle handshake message
         this.ws.on('handshake', (data) => {
-            this.logger.log(`🤝 Server: ${data.server_name} v${data.version}`);
+            this.logger.log(`🤝 Server: ${data.server_name}`);
+            if (data.version) {
+                this.logger.log(`📦 Version: ${data.version}`);
+            }
         });
 
         // Handle general status messages
@@ -101,13 +115,18 @@ class Application {
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('btn-send-chat');
         
-        sendBtn.addEventListener('click', () => this.sendChat());
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                this.sendChat();
-            }
-        });
+        if (sendBtn) {
+            sendBtn.addEventListener('click', () => this.sendChat());
+        }
+        
+        if (chatInput) {
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.sendChat();
+                }
+            });
+        }
 
         // Prevent space key on buttons
         preventSpaceKeyOnButtons();
@@ -129,11 +148,13 @@ class Application {
 
     sendChat() {
         const input = document.getElementById('chatInput');
+        if (!input) return;
+        
         const val = input.value.trim();
         
         if (val && this.ws.isConnected()) {
             this.ws.send(val);
-            this.logger.log("ME: " + val);
+            this.logger.log("💬 ME: " + val);
             input.value = '';
         }
     }
@@ -141,5 +162,10 @@ class Application {
 
 // Initialize app when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
-    window.app = new Application();
+    try {
+        window.app = new Application();
+    } catch (error) {
+        console.error('❌ Failed to initialize application:', error);
+        alert('Failed to start application. Check console for details.');
+    }
 });
