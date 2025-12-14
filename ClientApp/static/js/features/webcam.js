@@ -6,9 +6,8 @@ export class WebcamManager {
         this.isPlaying = false;
         this.currentFrameIdx = 0;
         this.playInterval = null;
-        this.FPS = 30; // Server gửi 30fps
+        this.FPS = 30;
         
-        // ✅ Recording state
         this.isRecording = false;
         this.recordingStartTime = null;
         this.recordingDuration = 20;
@@ -21,12 +20,10 @@ export class WebcamManager {
             screen: document.getElementById('video-screen'),
             overlay: document.getElementById('replay-overlay'),
             seeker: document.getElementById('video-seeker'),
-            timeCounter: document.getElementById('time-counter'), // ✅ THAY ĐỔI
+            timeCounter: document.getElementById('time-counter'),
             playBtn: document.getElementById('btn-play-video'),
             pauseBtn: document.getElementById('btn-pause-video'),
             saveBtn: document.getElementById('btn-save-video'),
-            
-            // Recording controls
             startRecBtn: document.getElementById('btn-start-record'),
             stopRecBtn: document.getElementById('btn-stop-record'),
             durationInput: document.getElementById('duration-input'),
@@ -38,12 +35,15 @@ export class WebcamManager {
     }
 
     setupListeners() {
-        // ✅ Start/Stop recording
+        // Start recording
         this.elements.startRecBtn.addEventListener('click', () => {
+            console.log('🔴 [DEBUG] START button clicked');
             this.startRecording();
         });
 
+        // Stop recording
         this.elements.stopRecBtn.addEventListener('click', () => {
+            console.log('🔴 [DEBUG] STOP button clicked');
             this.stopRecording();
         });
 
@@ -69,8 +69,9 @@ export class WebcamManager {
             this.showFrame(parseInt(this.elements.seeker.value));
         });
 
-        // ✅ WebSocket events
+        // WebSocket events
         this.ws.on('video_start', (data) => {
+            console.log('🔴 [DEBUG] video_start received:', data);
             this.frames = [];
             this.currentFrameIdx = 0;
             this.elements.status.style.display = 'none';
@@ -79,12 +80,12 @@ export class WebcamManager {
         });
 
         this.ws.on('video_batch', (data) => {
+            console.log('🔴 [DEBUG] video_batch received, frames:', data.frames?.length);
             if (data.frames && data.frames.length > 0) {
                 data.frames.forEach(frame => {
                     this.frames.push(frame.data);
                 });
                 
-                // Update timer while receiving
                 if (this.isRecording) {
                     const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
                     this.updateRecTimer(elapsed, this.recordingDuration);
@@ -93,6 +94,7 @@ export class WebcamManager {
         });
 
         this.ws.on('video_end', () => {
+            console.log('🔴 [DEBUG] video_end received, total frames:', this.frames.length);
             this.stopRecordingUI();
             
             if (this.frames.length > 0) {
@@ -105,9 +107,10 @@ export class WebcamManager {
         });
     }
 
-    // ✅ Start recording
     startRecording() {
         const duration = parseInt(this.elements.durationInput.value);
+        
+        console.log('🔴 [DEBUG] startRecording called, duration:', duration);
         
         if (duration < 5 || duration > 300) {
             alert('⚠️ Duration phải từ 5-300 giây!');
@@ -134,32 +137,44 @@ export class WebcamManager {
             this.updateRecTimer(elapsed, duration);
         }, 100);
         
-        // Send command to server
-        this.ws.send(`start_cam ${duration}`);
+        // ✅ GỬI COMMAND
+        const command = `start_cam ${duration}`;
+        console.log('🔴 [DEBUG] Sending command:', command);
+        console.log('🔴 [DEBUG] WebSocket connected:', this.ws.isConnected());
+        
+        const sent = this.ws.send(command);
+        console.log('🔴 [DEBUG] Command sent successfully:', sent);
+        
         this.logger.log(`> Recording started (${duration}s)`);
     }
 
-    // ✅ Stop recording
     stopRecording() {
-        if (!this.isRecording) return;
+        console.log('🔴 [DEBUG] stopRecording called');
         
-        this.ws.send('stop_cam');
+        if (!this.isRecording) {
+            console.log('🔴 [DEBUG] Not recording, ignoring');
+            return;
+        }
+        
+        const command = 'stop_cam';
+        console.log('🔴 [DEBUG] Sending command:', command);
+        
+        this.ws.send(command);
         this.logger.log('> Stopping recording...');
     }
 
-    // ✅ Stop recording UI (called when video_end received)
     stopRecordingUI() {
+        console.log('🔴 [DEBUG] stopRecordingUI called');
+        
         this.isRecording = false;
         clearInterval(this.timerInterval);
         
-        // Reset UI
         this.elements.startRecBtn.classList.remove('hidden');
         this.elements.stopRecBtn.classList.add('hidden');
         this.elements.durationInput.disabled = false;
         this.elements.recStatus.classList.add('hidden');
     }
 
-    // ✅ Update recording timer (00:12 / 00:20)
     updateRecTimer(elapsed, total) {
         const formatTime = (sec) => {
             const m = Math.floor(sec / 60);
@@ -170,7 +185,6 @@ export class WebcamManager {
         this.elements.recTimer.textContent = `${formatTime(elapsed)} / ${formatTime(total)}`;
     }
 
-    // ✅ Load player after recording
     loadPlayer() {
         this.currentFrameIdx = 0;
         this.elements.container.classList.remove('hidden');
@@ -180,7 +194,6 @@ export class WebcamManager {
         this.play();
     }
 
-    // ✅ Show frame (với time display)
     showFrame(index) {
         if (!this.frames || this.frames.length === 0) return;
         if (index < 0 || index >= this.frames.length) return;
@@ -188,7 +201,6 @@ export class WebcamManager {
         this.elements.screen.src = "data:image/jpeg;base64," + this.frames[index];
         this.elements.seeker.value = index;
         
-        // ✅ THAY ĐỔI: Hiển thị thời gian thay vì frame
         const currentTime = index / this.FPS;
         const totalTime = this.frames.length / this.FPS;
         this.elements.timeCounter.textContent = this.formatTime(currentTime) + ' / ' + this.formatTime(totalTime);
@@ -196,7 +208,6 @@ export class WebcamManager {
         this.currentFrameIdx = index;
     }
 
-    // ✅ Format time helper
     formatTime(seconds) {
         const m = Math.floor(seconds / 60);
         const s = Math.floor(seconds % 60);
