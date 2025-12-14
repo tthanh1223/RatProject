@@ -34,3 +34,10 @@ Anh em có code gì thì nhớ pull về sửa commit, branch main luôn không 
 
 
 # LƯU Ý: SỬA GÌ COMMIT ĐÓ DỄ THEO DÕI
+
+#TODO:
+- [ ] Fix logic keylog theo session
+- [ ] Fix logic webcam theo duration (in-memory size)
+- [ ] Tạo UI cho Power
+- [ ] Tạo login test 2 máy
+- [ ] Modulize lại ServerApp
