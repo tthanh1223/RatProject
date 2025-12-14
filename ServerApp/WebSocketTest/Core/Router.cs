@@ -101,20 +101,33 @@ namespace WebSocketTest.Core
                         ShutdownRestart.Restart();
                         return JsonResponse.Success("Lệnh khởi động lại đã được gửi.");
 
-                    case "get_cam":
+                    // Trong Router.cs - thay đổi case get_cam:
+
+                    case "start_cam":
+                        // Parse duration from argument
+                        if (!int.TryParse(arg, out int duration) || duration < 5 || duration > 300)
+                        {
+                            return JsonResponse.Error("Duration phải từ 5-300 giây");
+                        }
+                        
+                        // ✅ FIX: Sử dụng async Task.Run đúng cách
                         _ = Task.Run(async () =>
                         {
                             try
                             {
-                                await _sendAsync(JsonResponse.Info("Đang quay video (5s)..."));
-                                await _webcamService.CaptureAndSendAsync(_sendAsync, 7000);
+                                await _sendAsync(JsonResponse.Info($"Đang khởi động camera ({duration}s)..."));
+                                await _webcamService.StartRecordingAsync(_sendAsync, duration);
                             }
                             catch (Exception ex)
                             {
                                 await _sendAsync(JsonResponse.Error("Lỗi camera: " + ex.Message));
                             }
                         });
-                        return JsonResponse.Info("Đang khởi động Camera...");
+                        return JsonResponse.Info("Starting camera...");
+
+                    case "stop_cam":
+                        _webcamService.StopRecording();
+                        return JsonResponse.Info("Stopping recording...");
 
                     default:
                         return message;

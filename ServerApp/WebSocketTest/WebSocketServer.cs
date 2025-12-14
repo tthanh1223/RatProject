@@ -96,7 +96,7 @@ namespace WebSocketTest
             };
             await SendToClient(JsonSerializer.Serialize(handshake));
 
-            byte[] buffer = new byte[1024 * 1024]; // 1MB buffer cho dữ liệu lớn
+            byte[] buffer = new byte[5 * 1024 * 1024]; // 1MB buffer cho dữ liệu lớn
 
             try
             {

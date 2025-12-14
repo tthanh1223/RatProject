@@ -84,11 +84,37 @@
 
             <!-- Toolbar: Webcam -->
             <div id="toolbar-webcam" class="toolbar hidden">
-                <button class="btn-refresh" id="btn-record-webcam">📹 REC 5s</button>
-                <button id="btn-save-video" class="btn-exec">💾 SAVE VID</button>
+                <!-- Recording Controls -->
+                <button class="btn-exec" id="btn-start-record">📹 REC</button>
+                <button class="btn-kill hidden" id="btn-stop-record">⏹ STOP</button>
+                
+                <!-- Duration Input -->
+                <label style="margin-left: 20px; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 16px;">Duration:</span>
+                    <input type="number" id="duration-input" value="20" min="5" max="300" 
+                        style="width: 80px; flex: none; text-align: center;">
+                    <span style="font-size: 16px;">giây</span>
+                </label>
+                
+                <!-- Recording Status -->
+                <div id="rec-status" class="hidden" style="margin-left: 20px; display: flex; align-items: center; gap: 10px;">
+                    <span style="color: #ff2a6d; font-weight: bold; animation: blink 1s infinite;">● REC</span>
+                    <span id="rec-timer" style="font-family: monospace; font-size: 20px; color: #ff2a6d;">00:00 / 00:20</span>
+                </div>
+                
                 <div class="spacer"></div>
-                <span style="color:#555">[WEBCAM STREAM]</span>
+                
+                <!-- Save Button -->
+                <button id="btn-save-video" class="btn-exec">💾 SAVE VID</button>
             </div>
+
+            <!-- CSS Animation for blinking REC indicator -->
+            <style>
+            @keyframes blink {
+                0%, 49% { opacity: 1; }
+                50%, 100% { opacity: 0; }
+            }
+            </style>
 
             <!-- Toolbar: File Manager -->
             <div id="toolbar-files" class="toolbar hidden">
@@ -132,11 +158,13 @@
                         </div>
                     </div>
 
+                    <!-- Video Controls - TRONG #video-player-container -->
                     <div class="video-controls">
                         <button id="btn-play-video" class="btn-exec" style="width: 40px; height: 30px; font-size: 16px;">▶</button>
                         <button id="btn-pause-video" class="btn-kill" style="width: 40px; height: 30px; font-size: 16px;">II</button>
                         <input type="range" id="video-seeker" min="0" max="100" value="0" style="flex: 1; margin: 0 10px;">
-                        <span id="frame-counter" style="color: white; font-family: monospace; font-size: 14px;">000/000</span>
+                        <!-- ✅ THAY ĐỔI: Hiển thị time thay vì frame -->
+                        <span id="time-counter" style="color: white; font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold;">00:00 / 00:00</span>
                     </div>
                 </div>
             </div>
