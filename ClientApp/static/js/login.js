@@ -4,9 +4,7 @@ class LoginManager {
         this.form = document.getElementById('loginForm');
         this.input = document.getElementById('serverAddress');
         this.btnConnect = document.getElementById('btnConnect');
-        this.btnDiscover = document.getElementById('btnDiscover');
         this.status = document.getElementById('status');
-        this.discoveredList = document.getElementById('discoveredServers');
         
         this.setupEventListeners();
         this.input.focus();
@@ -14,7 +12,6 @@ class LoginManager {
 
     setupEventListeners() {
         this.form.addEventListener('submit', (e) => this.handleConnect(e));
-        this.btnDiscover.addEventListener('click', () => this.handleDiscover());
     }
 
     // Validate IP:PORT format
@@ -115,67 +112,6 @@ class LoginManager {
         }
     }
 
-    // Auto discover servers
-    async handleDiscover() {
-        this.showStatus('🔍 Đang quét mạng LAN...', 'info');
-        this.btnDiscover.disabled = true;
-        this.btnDiscover.textContent = '⏳ SCANNING...';
-        this.discoveredList.innerHTML = '';
-        this.discoveredList.style.display = 'none';
-
-        try {
-            // Get local IP
-            const localIP = await fetch('/api/get-local-ip').then(r => r.text());
-            const subnet = localIP.substring(0, localIP.lastIndexOf('.'));
-            
-            const commonPorts = [8080, 8081, 9000];
-            const found = [];
-
-            // Scan 20 nearest IPs
-            const currentHost = parseInt(localIP.split('.')[3]);
-            const startIP = Math.max(1, currentHost - 10);
-            const endIP = Math.min(254, currentHost + 10);
-
-            for (let i = startIP; i <= endIP; i++) {
-                for (const port of commonPorts) {
-                    try {
-                        const testAddr = `${subnet}.${i}:${port}`;
-                        await this.testConnection(testAddr);
-                        found.push(testAddr);
-                        
-                        // Display immediately when found
-                        this.addServerItem(testAddr);
-                    } catch (e) {
-                        // Server not exists or not RAT server
-                    }
-                }
-            }
-
-            if (found.length === 0) {
-                this.showStatus('❌ Không tìm thấy server nào trong mạng', 'error');
-            } else {
-                this.showStatus(`✅ Tìm thấy ${found.length} server(s)`, 'success');
-            }
-        } catch (error) {
-            this.showStatus('❌ Lỗi khi quét mạng: ' + error.message, 'error');
-        } finally {
-            this.btnDiscover.disabled = false;
-            this.btnDiscover.textContent = '🔍 AUTO DISCOVER';
-        }
-    }
-
-    // Add server item to list
-    addServerItem(address) {
-        const item = document.createElement('div');
-        item.className = 'server-item';
-        item.textContent = `✓ ${address}`;
-        item.onclick = () => {
-            this.input.value = address;
-            this.form.dispatchEvent(new Event('submit'));
-        };
-        this.discoveredList.appendChild(item);
-        this.discoveredList.style.display = 'block';
-    }
 }
 
 // Initialize when DOM is ready

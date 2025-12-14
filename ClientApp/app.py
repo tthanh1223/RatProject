@@ -41,14 +41,6 @@ async def root(request: Request, server: str = None):
         # Chưa có server → render login page
         return templates.TemplateResponse("login.html", {"request": request})
 
-@app.get("/api/get-local-ip", response_class=PlainTextResponse)
-async def api_get_local_ip():
-    """
-    API endpoint để lấy IP của máy client
-    Dùng cho tính năng auto-discover
-    """
-    return get_local_ip()
-
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """
