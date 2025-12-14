@@ -246,7 +246,7 @@ button:disabled {
 
 /* Custom Range Input */
 input[type=range] {
-    -webkit-appearance: none; background: transparent; padding: 0; border: none; box-shadow: none;
+    appearance: none; -webkit-appearance: none; background: transparent; padding: 0; border: none; box-shadow: none;
 }
 input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none; height: 20px; width: 10px; background: #fff; border: 2px solid #000; cursor: pointer; margin-top: -8px;

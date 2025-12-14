@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace WebSocketTest
+namespace WebSocketTest.Services
 {
     public class FileEntry
     {
@@ -39,12 +39,12 @@ namespace WebSocketTest
         public int Total { get; set; }
     }
 
-    public class FileManager
+    public class FileService
     {
-        private readonly string _root; // allowed root directory (canonical)
+        private readonly string _root;
         private readonly long _maxStreamFileSizeBytes;
 
-        public FileManager(string rootDirectory, long maxStreamFileSizeBytes = 1024L * 1024 * 1024)
+        public FileService(string rootDirectory, long maxStreamFileSizeBytes = 1024L * 1024 * 1024)
         {
             if (string.IsNullOrWhiteSpace(rootDirectory)) throw new ArgumentException("rootDirectory");
             _root = Path.GetFullPath(rootDirectory);
@@ -52,36 +52,65 @@ namespace WebSocketTest
             _maxStreamFileSizeBytes = maxStreamFileSizeBytes;
         }
 
-        // Private helper: resolve path and ensure it's under allowed root
         private string ResolveAndValidatePath(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException(nameof(path));
-
             string combined = Path.IsPathRooted(path) ? path : Path.Combine(_root, path);
             string full = Path.GetFullPath(combined);
-
-            // Ensure the resolved path is under _root
-            if (!full.StartsWith(_root, StringComparison.OrdinalIgnoreCase))
-                throw new UnauthorizedAccessException("Access to path is not allowed");
-
+            if (!full.StartsWith(_root, StringComparison.OrdinalIgnoreCase)) throw new UnauthorizedAccessException("Access to path is not allowed");
             return full;
         }
 
-        public bool FileExists(string path)
+        public async Task<string> ListDirectoryAsync(string path)
         {
-            string full = ResolveAndValidatePath(path);
-            return File.Exists(full);
+            var entries = await ListDirectoryEntriesAsync(path);
+            var items = entries.Select(e => new
+            {
+                name = e.Name,
+                fullPath = e.FullPath,
+                isDirectory = e.IsDirectory,
+                size = e.Size,
+                lastModified = e.LastModified
+            }).ToList();
+
+            var payload = new { type = "file_list", path = path, items = items };
+            return JsonSerializer.Serialize(payload);
         }
 
-        public async Task<IEnumerable<FileEntry>> ListDirectoryAsync(string path, ListOptions? options = null)
+        public async Task DownloadFileAsync(string path, Func<string, Task> sendAsync)
+        {
+            var meta = await GetFileMetadataAsync(path);
+            if (sendAsync == null) return;
+
+            var start = new { type = "file_start", path = path, size = meta.Size, contentType = meta.ContentType };
+            await sendAsync(JsonSerializer.Serialize(start));
+
+            await using var fs = await GetFileStreamAsync(path);
+            byte[] buffer = new byte[64 * 1024];
+            int read;
+            int index = 0;
+            int totalChunks = 0;
+
+            while ((read = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                string b64 = Convert.ToBase64String(buffer, 0, read);
+                var chunk = new { type = "file_chunk", index = index, path = path, data = b64 };
+                await sendAsync(JsonSerializer.Serialize(chunk));
+                index++;
+                totalChunks++;
+            }
+
+            var end = new { type = "file_end", path = path, totalChunks = totalChunks };
+            await sendAsync(JsonSerializer.Serialize(end));
+        }
+
+        public async Task<IEnumerable<FileEntry>> ListDirectoryEntriesAsync(string path, ListOptions? options = null)
         {
             string full = ResolveAndValidatePath(path);
             if (!Directory.Exists(full)) throw new DirectoryNotFoundException(full);
 
             options ??= new ListOptions();
-
             var entries = new List<FileEntry>();
-
             var searchPattern = string.IsNullOrEmpty(options.SearchPattern) ? "*" : options.SearchPattern;
 
             if (options.Recursive)
@@ -89,27 +118,13 @@ namespace WebSocketTest
                 foreach (var dir in Directory.EnumerateDirectories(full, searchPattern, SearchOption.AllDirectories))
                 {
                     var di = new DirectoryInfo(dir);
-                    entries.Add(new FileEntry
-                    {
-                        Name = di.Name,
-                        FullPath = di.FullName,
-                        IsDirectory = true,
-                        Size = 0,
-                        LastModified = di.LastWriteTimeUtc
-                    });
+                    entries.Add(new FileEntry { Name = di.Name, FullPath = di.FullName, IsDirectory = true, Size = 0, LastModified = di.LastWriteTimeUtc });
                 }
 
                 foreach (var file in Directory.EnumerateFiles(full, searchPattern, SearchOption.AllDirectories))
                 {
                     var fi = new FileInfo(file);
-                    entries.Add(new FileEntry
-                    {
-                        Name = fi.Name,
-                        FullPath = fi.FullName,
-                        IsDirectory = false,
-                        Size = fi.Length,
-                        LastModified = fi.LastWriteTimeUtc
-                    });
+                    entries.Add(new FileEntry { Name = fi.Name, FullPath = fi.FullName, IsDirectory = false, Size = fi.Length, LastModified = fi.LastWriteTimeUtc });
                 }
             }
             else
@@ -117,31 +132,16 @@ namespace WebSocketTest
                 foreach (var dir in Directory.EnumerateDirectories(full, searchPattern, SearchOption.TopDirectoryOnly))
                 {
                     var di = new DirectoryInfo(dir);
-                    entries.Add(new FileEntry
-                    {
-                        Name = di.Name,
-                        FullPath = di.FullName,
-                        IsDirectory = true,
-                        Size = 0,
-                        LastModified = di.LastWriteTimeUtc
-                    });
+                    entries.Add(new FileEntry { Name = di.Name, FullPath = di.FullName, IsDirectory = true, Size = 0, LastModified = di.LastWriteTimeUtc });
                 }
 
                 foreach (var file in Directory.EnumerateFiles(full, searchPattern, SearchOption.TopDirectoryOnly))
                 {
                     var fi = new FileInfo(file);
-                    entries.Add(new FileEntry
-                    {
-                        Name = fi.Name,
-                        FullPath = fi.FullName,
-                        IsDirectory = false,
-                        Size = fi.Length,
-                        LastModified = fi.LastWriteTimeUtc
-                    });
+                    entries.Add(new FileEntry { Name = fi.Name, FullPath = fi.FullName, IsDirectory = false, Size = fi.Length, LastModified = fi.LastWriteTimeUtc });
                 }
             }
 
-            // return ordered: directories first then files
             var ordered = entries.OrderByDescending(e => e.IsDirectory).ThenBy(e => e.Name).ToList();
             await Task.CompletedTask;
             return ordered;
@@ -153,53 +153,20 @@ namespace WebSocketTest
             if (!Directory.Exists(full)) throw new DirectoryNotFoundException(full);
 
             var pattern = string.IsNullOrEmpty(filter) ? "*" : filter;
-
-            var dirs = Directory.EnumerateDirectories(full, pattern, SearchOption.TopDirectoryOnly)
-                .Select(d => new DirectoryInfo(d))
-                .Select(di => new FileEntry
-                {
-                    Name = di.Name,
-                    FullPath = di.FullName,
-                    IsDirectory = true,
-                    Size = 0,
-                    LastModified = di.LastWriteTimeUtc
-                });
-
-            var files = Directory.EnumerateFiles(full, pattern, SearchOption.TopDirectoryOnly)
-                .Select(f => new FileInfo(f))
-                .Select(fi => new FileEntry
-                {
-                    Name = fi.Name,
-                    FullPath = fi.FullName,
-                    IsDirectory = false,
-                    Size = fi.Length,
-                    LastModified = fi.LastWriteTimeUtc
-                });
-
+            var dirs = Directory.EnumerateDirectories(full, pattern, SearchOption.TopDirectoryOnly).Select(d => new DirectoryInfo(d)).Select(di => new FileEntry { Name = di.Name, FullPath = di.FullName, IsDirectory = true, Size = 0, LastModified = di.LastWriteTimeUtc });
+            var files = Directory.EnumerateFiles(full, pattern, SearchOption.TopDirectoryOnly).Select(f => new FileInfo(f)).Select(fi => new FileEntry { Name = fi.Name, FullPath = fi.FullName, IsDirectory = false, Size = fi.Length, LastModified = fi.LastWriteTimeUtc });
             var all = dirs.Concat(files).OrderByDescending(e => e.IsDirectory).ThenBy(e => e.Name).ToList();
+            var total = all.Count; var items = all.Skip(offset).Take(limit).ToList();
 
-            var total = all.Count;
-            var items = all.Skip(offset).Take(limit).ToList();
-
-            return new PagedResult<FileEntry>
-            {
-                Items = items,
-                Offset = offset,
-                Limit = limit,
-                Total = total
-            };
+            return new PagedResult<FileEntry> { Items = items, Offset = offset, Limit = limit, Total = total };
         }
 
         public async Task<FileStream> GetFileStreamAsync(string path)
         {
             string full = ResolveAndValidatePath(path);
             if (!File.Exists(full)) throw new FileNotFoundException(full);
-
             var fi = new FileInfo(full);
-            if (fi.Length > _maxStreamFileSizeBytes)
-                throw new InvalidOperationException("File too large to stream");
-
-            // Open read-only stream; caller is responsible to dispose
+            if (fi.Length > _maxStreamFileSizeBytes) throw new InvalidOperationException("File too large to stream");
             var fs = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
             await Task.CompletedTask;
             return fs;
@@ -209,10 +176,8 @@ namespace WebSocketTest
         {
             string full = ResolveAndValidatePath(path);
             if (!File.Exists(full)) return null;
-
             var fi = new FileInfo(full);
             if (maxBytes.HasValue && fi.Length > maxBytes.Value) return null;
-
             return await File.ReadAllBytesAsync(full);
         }
 
@@ -220,20 +185,9 @@ namespace WebSocketTest
         {
             string full = ResolveAndValidatePath(path);
             if (!File.Exists(full)) throw new FileNotFoundException(full);
-
             var fi = new FileInfo(full);
-            var meta = new FileMetadata
-            {
-                Size = fi.Length,
-                ContentType = GetMimeType(fi.Extension),
-                LastModified = fi.LastWriteTimeUtc
-            };
-
-            if (includeHash)
-            {
-                meta.HashSha256 = await CalculateHashAsync(full);
-            }
-
+            var meta = new FileMetadata { Size = fi.Length, ContentType = GetMimeType(fi.Extension), LastModified = fi.LastWriteTimeUtc };
+            if (includeHash) meta.HashSha256 = await CalculateHashAsync(full);
             return meta;
         }
 
@@ -241,7 +195,6 @@ namespace WebSocketTest
         {
             string full = ResolveAndValidatePath(path);
             if (!File.Exists(full)) throw new FileNotFoundException(full);
-
             using var sha = SHA256.Create();
             await using var fs = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read);
             var hash = await sha.ComputeHashAsync(fs);
@@ -252,7 +205,6 @@ namespace WebSocketTest
         {
             if (string.IsNullOrEmpty(extension)) return "application/octet-stream";
             extension = extension.TrimStart('.').ToLowerInvariant();
-
             return extension switch
             {
                 "txt" => "text/plain",

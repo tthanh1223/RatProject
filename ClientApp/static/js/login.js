@@ -4,9 +4,7 @@ class LoginManager {
         this.form = document.getElementById('loginForm');
         this.input = document.getElementById('serverAddress');
         this.btnConnect = document.getElementById('btnConnect');
-        this.btnDiscover = document.getElementById('btnDiscover');
         this.status = document.getElementById('status');
-        this.discoveredList = document.getElementById('discoveredServers');
         
         this.setupEventListeners();
         this.input.focus();
@@ -14,7 +12,6 @@ class LoginManager {
 
     setupEventListeners() {
         this.form.addEventListener('submit', (e) => this.handleConnect(e));
-        this.btnDiscover.addEventListener('click', () => this.handleDiscover());
     }
 
     // Validate IP:PORT format

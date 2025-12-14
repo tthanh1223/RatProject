@@ -3,35 +3,41 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
+using WebSocketTest.Models;
 
-namespace WebSocketTest
+namespace WebSocketTest.Services
 {
-    public static class ScreenCapture
+    public class ScreenService
     {
-        public static string GetScreenshotBase64()
+        public string GetScreen()
+        {
+            string base64Image = GetScreenshotBase64();
+
+            if (base64Image.StartsWith("ERROR"))
+            {
+                return JsonResponse.Error("Lỗi chụp màn hình: " + base64Image);
+            }
+
+            return "{\"type\": \"screen_capture\", \"data\": \"" + base64Image + "\"}";
+        }
+
+        private static string GetScreenshotBase64()
         {
             try
             {
-                // Lấy kích thước màn hình chính
                 Rectangle bounds = Screen.PrimaryScreen?.Bounds ?? Rectangle.Empty;
 
                 using (Bitmap bitmap = new Bitmap(bounds.Width, bounds.Height))
                 {
                     using (Graphics g = Graphics.FromImage(bitmap))
                     {
-                        // Chụp toàn bộ màn hình
                         g.CopyFromScreen(Point.Empty, Point.Empty, bounds.Size);
                     }
 
                     using (MemoryStream ms = new MemoryStream())
                     {
-                        // Lưu ảnh vào MemoryStream dưới dạng JPEG (để nhẹ hơn PNG)
-                        // Nếu muốn nét hơn thì dùng ImageFormat.Png
                         bitmap.Save(ms, ImageFormat.Jpeg);
-                        
                         byte[] imageBytes = ms.ToArray();
-                        
-                        // Chuyển sang Base64
                         return Convert.ToBase64String(imageBytes);
                     }
                 }

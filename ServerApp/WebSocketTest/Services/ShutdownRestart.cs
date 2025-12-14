@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace WebSocketTest
+namespace WebSocketTest.Services
 {
     public static class ShutdownRestart
     {
@@ -9,7 +9,6 @@ namespace WebSocketTest
         {
             try
             {
-                // Shutdown máy tính sau 5 giây
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
@@ -29,7 +28,6 @@ namespace WebSocketTest
         {
             try
             {
-                // Restart máy tính sau 5 giây
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
