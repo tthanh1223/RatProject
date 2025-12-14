@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Task Manager</title>
+    <title>Task Manager</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -11,11 +11,13 @@
      <link rel = "stylesheet" href="/static/css/styles.css">    
 </head>
 <body>
+    <!-- Image Modal -->
     <div id="imgModal" class="modal">
-        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <span class="close-modal" id="closeModalBtn">&times;</span>
         <img class="modal-content" id="img01">
     </div>
 
+    <!-- Header -->
     <div class="header">
         <div>📡 REMOTE_CONTROLLER_V1.0</div>
         <div style="font-size: 20px; display: flex; align-items: center;">
@@ -24,70 +26,87 @@
         </div>
     </div>
 
+    <!-- Tabs -->
     <div class="tab-container">
-        <div class="tab active" onclick="switchTab('apps')">🖥️ APPS</div>
-        <div class="tab" onclick="switchTab('processes')">⚙️ PROCS</div>
-        <div class="tab" onclick="switchTab('screen')">📸 SCRN</div>
-        <div class="tab" onclick="switchTab('keylog')">⌨️ KEYS</div>
-        <div class="tab" onclick="switchTab('shutdown')">🔌 POWER</div>
-        <div class="tab" onclick="switchTab('webcam')">📹 CAM</div>
+        <div class="tab active" data-tab="apps">🖥️ APPS</div>
+        <div class="tab" data-tab="processes">⚙️ PROCS</div>
+        <div class="tab" data-tab="screen">📸 SCRN</div>
+        <div class="tab" data-tab="keylog">⌨️ KEYS</div>
+        <div class="tab" data-tab="shutdown">🔌 POWER</div>
+        <div class="tab" data-tab="webcam">📹 CAM</div>
     </div>
     
+    <!-- Main Content -->
     <div class="content">
+        <!-- Left Panel: Views -->
         <div class="view-panel pixel-box">
             
+            <!-- Toolbar: Apps -->
             <div id="toolbar-apps" class="toolbar">
-                <button class="btn-refresh" onclick="sendCmd('listApps')">🔄 Refresh</button>
+                <button class="btn-refresh" id="btn-refresh-apps">🔄 Refresh</button>
                 <div class="spacer"></div>
                 <input type="text" id="appInput" placeholder="Ex: notepad...">
-                <button class="btn-exec" onclick="startApp()">▶ Start App</button>
+                <button class="btn-exec" id="btn-start-app">▶ Start App</button>
             </div>
 
+            <!-- Toolbar: Processes -->
             <div id="toolbar-processes" class="toolbar hidden">
-                <button class="btn-refresh" onclick="sendCmd('listProcesses')">🔄 Refresh</button>
+                <button class="btn-refresh" id="btn-refresh-processes">🔄 Refresh</button>
                 <div class="spacer"></div>
                 <input type="text" id="procInput" placeholder="Ex: cmd.exe...">
-                <button class="btn-exec" onclick="startProcessTask()">▶ Run Task</button>
+                <button class="btn-exec" id="btn-start-process">▶ Run Task</button>
             </div>
 
+            <!-- Toolbar: Screen -->
             <div id="toolbar-screen" class="toolbar hidden">
-                <button class="btn-refresh" onclick="sendCmd('get_screen')">📸 Capture</button>
-                <button class="btn-exec" onclick="saveScreenshot()">💾 Save PNG</button>
+                <button class="btn-refresh" id="btn-capture-screen">📸 Capture</button>
+                <button class="btn-exec" id="btn-save-screenshot">💾 Save PNG</button>
                 <div class="spacer"></div>
                 <span style="color:#555; font-size:16px; font-weight:bold;">[FMT: JPEG]</span>
             </div>
 
+            <!-- Toolbar: Keylogger -->
             <div id="toolbar-keylog" class="toolbar hidden">
-                <button type="button" class="btn-exec" onclick="sendCmd('keylog_start')">▶ REC</button>
-                <button type="button" class="btn-kill" onclick="sendCmd('keylog_stop')">⏹ STOP</button>
-                <button type="button" class="btn-refresh" onclick="sendCmd('keylog_get')">📥 PULL</button>
+                <button type="button" class="btn-exec" id="btn-keylog-start">▶ REC</button>
+                <button type="button" class="btn-kill" id="btn-keylog-stop">⏹ STOP</button>
+                <button type="button" class="btn-refresh" id="btn-keylog-get">📥 PULL</button>
                 <div class="spacer"></div>
-                <button type="button" class="btn-dark" onclick="sendCmd('keylog_clear')">🗑 CLEAR</button>
+                <button type="button" class="btn-dark" id="btn-keylog-clear">🗑 CLEAR</button>
             </div>
 
+            <!-- Toolbar: Shutdown -->
             <div id="toolbar-shutdown" class="toolbar hidden">
-                <button class="btn-kill" onclick="confirmShutdown()">🔴 SHUTDOWN</button>
-                <button class="btn-refresh" style="background: #fd7e14; color:white;" onclick="confirmRestart()">🔄 RESTART</button>
+                <button class="btn-kill" id="btn-shutdown">🔴 SHUTDOWN</button>
+                <button class="btn-refresh" style="background: #fd7e14; color:white;" id="btn-restart">🔄 RESTART</button>
                 <div class="spacer"></div>
                 <span style="color:#d00; font-weight:bold;">⚠️ DANGER ZONE</span>
             </div>
 
+            <!-- Toolbar: Webcam -->
             <div id="toolbar-webcam" class="toolbar hidden">
-                <button class="btn-refresh" onclick="sendCmd('get_cam')">📹 REC 5s</button>
-                <button id="btn-save-video" class="btn-exec" onclick="exportAndDownload()">💾 SAVE VID</button>
+                <button class="btn-refresh" id="btn-record-webcam">📹 REC 5s</button>
+                <button id="btn-save-video" class="btn-exec">💾 SAVE VID</button>
                 <div class="spacer"></div>
                 <span style="color:#555">[WEBCAM STREAM]</span>
             </div>
 
+            <!-- View: Keylogger -->
             <div id="view-keylog" class="hidden scroll-area" style="padding: 0; background: #000;">
-                <textarea id="txtKeylogs" style="width: 100%; height: 100%; background: #000; color: #0f0; font-family: 'Courier New', monospace; border: none; padding: 15px; resize: none; box-sizing: border-box; outline: none;" readonly placeholder="> WAITING FOR DATA..." onkeydown="event.preventDefault()"></textarea>
+                <textarea id="txtKeylogs" 
+                    style="width: 100%; height: 100%; background: #000; color: #0f0; 
+                    font-family: 'Courier New', monospace; border: none; padding: 15px; 
+                    resize: none; box-sizing: border-box; outline: none;" 
+                    readonly 
+                    placeholder="> WAITING FOR DATA..."></textarea>
             </div>
 
+            <!-- View: Screen Capture -->
             <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 20px; background: #333; height: 100%;">
                 <div id="loading-screen" style="color: #0f0; display: none; margin-bottom: 10px;">⏳ RECEIVING DATA...</div>
-                <img id="screen-img" onclick="openModal()" />
+                <img id="screen-img" style="cursor: pointer;" />
             </div>
 
+            <!-- View: Webcam -->
             <div id="view-webcam" class="hidden scroll-area" style="height: 100%;">
                 <div id="cam-status" style="color: #888; margin-top: 50px; text-align: center; font-size: 24px;">
                     PRESS [REC 5s] TO START
@@ -99,20 +118,21 @@
                 <div id="video-player-container" class="hidden">
                     <div style="position: relative; background: black; line-height: 0; display: flex; align-items: center; justify-content: center; border: 2px solid #555;">
                         <img id="video-screen" style="width:100%; height:auto; box-shadow:none; border:none;" />
-                        <div id="replay-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); cursor: pointer;" onclick="playVideo()">
+                        <div id="replay-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); cursor: pointer;">
                             <span style="color: #0f0; font-size: 80px; text-shadow: 4px 4px 0 #000;">▶</span>
                         </div>
                     </div>
 
                     <div class="video-controls">
-                        <button onclick="playVideo()" class="btn-exec" style="width: 40px; height: 30px; font-size: 16px;">▶</button>
-                        <button onclick="pauseVideo()" class="btn-kill" style="width: 40px; height: 30px; font-size: 16px;">II</button>
+                        <button id="btn-play-video" class="btn-exec" style="width: 40px; height: 30px; font-size: 16px;">▶</button>
+                        <button id="btn-pause-video" class="btn-kill" style="width: 40px; height: 30px; font-size: 16px;">II</button>
                         <input type="range" id="video-seeker" min="0" max="100" value="0" style="flex: 1; margin: 0 10px;">
                         <span id="frame-counter" style="color: white; font-family: monospace; font-size: 14px;">000/000</span>
                     </div>
                 </div>
             </div>
 
+            <!-- View: Tables (Apps & Processes) -->
             <div id="view-tables" class="scroll-area">
                 <table id="table-apps">
                     <thead>
@@ -140,416 +160,18 @@
             </div>
         </div>
 
+        <!-- Right Panel: System Log -->
         <div class="log-panel pixel-box">
             <div class="log-header">SYSTEM LOG</div>
             <div id="chat-content"></div>
             <div class="log-input">
                 <input type="text" id="chatInput" placeholder="CMD/Chat...">
-                <button onclick="sendChat()" class="btn-neutral">SEND</button>
+                <button id="btn-send-chat" class="btn-neutral">SEND</button>
             </div>
         </div>
     </div>
 
-<script>
-    // Nhận IP của Server từ user input hoặc mặc định
-    const params = new URLSearchParams(window.location.search);
-    const SERVER_IP = params.get('server') || 'localhost'; 
-    const WS_URL = `ws://${SERVER_IP}:8080/`;
-    
-    console.log(`Kết nối đến Server WebSocket: ${WS_URL}`);
-    
-    let socket = null;
-    let currentTab = 'apps';
-
-    function connect() {
-        socket = new WebSocket(WS_URL);
-        
-        socket.onopen = () => {
-            updateStatus(true);
-            refreshCurrentTab();
-        };
-
-        socket.onmessage = (event) => {
-            const data = event.data;
-            try {
-                const json = JSON.parse(data);
-                
-                if (json.type === 'apps') {
-                    renderApps(json.data);
-                    log(`> Loaded ${json.data.length} apps.`);
-                }
-                else if (json.type === 'processes') {
-                    renderProcesses(json.data);
-                    log(`> Loaded ${json.data.length} processes.`);
-                }
-                else if (json.type === 'screen_capture') {
-                    document.getElementById('loading-screen').style.display = 'none';
-                    const img = document.getElementById('screen-img');
-                    img.src = "data:image/jpeg;base64," + json.data;
-                    
-                    const modalImg = document.getElementById("img01");
-                    if(document.getElementById('imgModal').style.display === 'block') {
-                        modalImg.src = img.src;
-                    }
-                    log("> Screen capture received.");
-                }
-                else if (json.type === 'keylog_data') {
-                    const txt = document.getElementById('txtKeylogs');
-                    txt.value = json.data;
-                    txt.scrollTop = txt.scrollHeight; 
-                    log("> Keylogs updated.");
-                }
-                // === XỬ LÝ VIDEO ===
-                else if (json.type === 'video_start') {
-                    videoFrames = [];
-                    currentFrameIdx = 0;
-                    document.getElementById('cam-status').style.display = 'none';
-                    document.getElementById('video-player-container').classList.add('hidden');
-                    document.getElementById('loading-cam').style.display = 'block';
-                    log(`> Video start (${json.count} frames)...`);
-                }
-                else if (json.type === 'video_batch') {
-                    if (json.frames && json.frames.length > 0) {
-                        json.frames.forEach(frame => {
-                            videoFrames.push(frame.data);
-                        });
-                        log(`> Batch received: ${videoFrames.length} frames...`);
-                    }
-                }
-                else if (json.type === 'video_end') {
-                    document.getElementById('loading-cam').style.display = 'none';
-                    document.getElementById('cam-status').style.display = 'none';
-                    if (videoFrames.length > 0) {
-                        loadVideoPlayer(videoFrames);
-                        log(`> Video complete (${videoFrames.length} frames)`);
-                    } else {
-                        log("> ❌ No frames received");
-                    }
-                }
-                else if (json.type === 'video_stream') {
-                    document.getElementById('loading-cam').style.display = 'none';
-                    document.getElementById('cam-status').style.display = 'none';
-                    loadVideoPlayer(json.data);
-                    log("> Video loaded.");
-                }
-                else if (json.trang_thai) {
-                    log(`[${json.trang_thai}] ${json.thong_bao}`);
-                    if(json.trang_thai === 'thanh_cong') refreshCurrentTab();
-                }
-            } catch (e) {
-                log("Err: " + data);
-            }
-        };
-
-        socket.onclose = () => {
-            updateStatus(false);
-            setTimeout(connect, 3000);
-        };
-    }
-
-    // --- TAB LOGIC ---
-    function switchTab(tab) {
-        currentTab = tab;
-        
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        event.target.classList.add('active');
-
-        ['apps', 'processes', 'screen', 'keylog', 'shutdown','webcam'].forEach(t => {
-            document.getElementById(`toolbar-${t}`).classList.add('hidden');
-        });
-
-        document.getElementById('view-tables').classList.add('hidden');
-        document.getElementById('view-screen').classList.add('hidden');
-        document.getElementById('view-keylog').classList.add('hidden');
-        document.getElementById('view-webcam').classList.add('hidden');
-
-        document.getElementById(`toolbar-${tab}`).classList.remove('hidden');
-
-        if (tab === 'apps') {
-            document.getElementById('view-tables').classList.remove('hidden');
-            document.getElementById('table-apps').classList.remove('hidden');
-            document.getElementById('table-processes').classList.add('hidden');
-        } 
-        else if (tab === 'processes') {
-            document.getElementById('view-tables').classList.remove('hidden');
-            document.getElementById('table-apps').classList.add('hidden');
-            document.getElementById('table-processes').classList.remove('hidden');
-        } 
-        else if (tab === 'screen') {
-            document.getElementById('view-screen').classList.remove('hidden');
-            document.getElementById('view-screen').style.display = 'block'; 
-        } 
-        else if (tab === 'keylog') {
-            document.getElementById('view-keylog').classList.remove('hidden');
-        }
-        else if (tab === 'webcam') {
-            document.getElementById('view-webcam').classList.remove('hidden');
-        }
-        
-        if (tab !== 'screen' && tab !== 'keylog' && tab !== 'shutdown') refreshCurrentTab();
-    }
-
-    function refreshCurrentTab() {
-        if (!socket || socket.readyState !== 1) return;
-        if (currentTab === 'apps') sendCmd('listApps');
-        else if (currentTab === 'processes') sendCmd('listProcesses');
-    }
-
-    // --- RENDER FUNCTIONS ---
-    function renderApps(list) {
-        const tbody = document.getElementById('tbody-apps');
-        tbody.innerHTML = '';
-        list.forEach(app => {
-            tbody.innerHTML += `
-                <tr>
-                    <td>${app.pid}</td>
-                    <td style="color:#5e6ad2">${app.tieu_de}</td>
-                    <td>${app.ten}.exe</td>
-                    <td><button class="btn-kill" style="font-size:14px; padding:2px 10px; height:auto;" onclick="stopApp('${app.ten}')">X</button></td>
-                </tr>
-            `;
-        });
-    }
-
-    function renderProcesses(list) {
-        const tbody = document.getElementById('tbody-processes');
-        tbody.innerHTML = '';
-        list.forEach(proc => {
-            tbody.innerHTML += `
-                <tr>
-                    <td>${proc.pid}</td>
-                    <td><b>${proc.ten}</b></td>
-                    <td class="mem-col">${proc.mem}</td>
-                    <td><button class="btn-kill" style="font-size:14px; padding:2px 10px; height:auto; background:#444;" onclick="killProcess(${proc.pid})">KILL</button></td>
-                </tr>
-            `;
-        });
-    }
-
-    // --- ACTIONS ---
-    function sendCmd(cmd) {
-        if(socket && socket.readyState === 1) {
-            socket.send(cmd);
-            if (cmd === 'get_screen') document.getElementById('loading-screen').style.display = 'block';
-            if (cmd === 'get_cam') {
-                document.getElementById('loading-cam').style.display = 'block';
-                document.getElementById('cam-status').style.display = 'none';
-            }
-        }
-    }
-
-    function startApp() {
-        const name = document.getElementById('appInput').value;
-        if(name) sendCmd(`startApp ${name}`);
-    }
-    function stopApp(name) {
-        if(confirm(`Close app '${name}'?`)) sendCmd(`stopApp ${name}`);
-    }
-    function startProcessTask() {
-        const name = document.getElementById('procInput').value;
-        if(name) sendCmd(`startApp ${name}`); else alert("Input name!");
-    }
-    function killProcess(pid) {
-        if(confirm(`Kill PID ${pid}?`)) sendCmd(`killProcess ${pid}`);
-    }
-
-    function confirmShutdown() {
-        if(confirm('ARE YOU SURE TO SHUTDOWN REMOTE PC?')) {
-            sendCmd('shutdown');
-            log('Shutdown sent.');
-        }
-    }
-
-    function confirmRestart() {
-        if(confirm('ARE YOU SURE TO RESTART REMOTE PC?')) {
-            sendCmd('restart');
-            log('Restart sent.');
-        }
-    }
-
-    function sendChat() {
-        const val = document.getElementById('chatInput').value;
-        if(val) {
-            socket.send(val);
-            log("ME: " + val);
-            document.getElementById('chatInput').value = '';
-        }
-    }
-
-    function log(msg) {
-        const div = document.createElement('div');
-        div.style.marginBottom = "5px";
-        div.style.borderBottom = "1px dashed #333";
-        div.innerText = msg;
-        document.getElementById('chat-content').prepend(div);
-    }
-
-    function updateStatus(isOnline) {
-        const dot = document.getElementById('status-dot');
-        const txt = document.getElementById('status-text');
-        if(isOnline) {
-            dot.classList.add('online');
-            txt.innerText = "CONNECTED";
-            txt.style.color = "#00e436";
-        } else {
-            dot.classList.remove('online');
-            txt.innerText = "DISCONNECTED";
-            txt.style.color = "#ff2a6d";
-        }
-    }
-
-    // --- MODAL & MISC ---
-    function openModal() {
-        const modal = document.getElementById("imgModal");
-        const sourceImg = document.getElementById("screen-img");
-        const modalImg = document.getElementById("img01");
-        
-        if (sourceImg.src && sourceImg.src.startsWith("data:image")) {
-            modal.style.display = "block";
-            modalImg.src = sourceImg.src;
-        }
-    }
-    function closeModal() {
-        document.getElementById("imgModal").style.display = "none";
-    }
-    window.onclick = function(event) {
-        if (event.target == document.getElementById("imgModal")) closeModal();
-    }
-
-    function saveScreenshot() {
-        const img = document.getElementById('screen-img');
-        if (!img.src || !img.src.startsWith("data:image")) {
-            alert("No image captured!");
-            return;
-        }
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const tempImg = new Image();
-        tempImg.onload = function() {
-            canvas.width = tempImg.width;
-            canvas.height = tempImg.height;
-            ctx.drawImage(tempImg, 0, 0);
-            canvas.toBlob(function(blob) {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'SCREEN_' + new Date().getTime() + '.png';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                log("✓ Saved PNG.");
-            }, 'image/png');
-        };
-        tempImg.src = img.src;
-    }
-
-    // --- VIDEO PLAYER ---
-    let videoFrames = [];
-    let isPlaying = false;
-    let currentFrameIdx = 0;
-    let playInterval = null;
-    const FPS = 30;
-
-    function loadVideoPlayer(frames) {
-        if (!frames || frames.length === 0) {
-            log("❌ Err: No frames");
-            document.getElementById('video-player-container').classList.add('hidden');
-            return;
-        }
-        videoFrames = frames;
-        currentFrameIdx = 0;
-        const player = document.getElementById('video-player-container');
-        if (player) player.classList.remove('hidden');
-        
-        const seeker = document.getElementById('video-seeker');
-        if (seeker) { seeker.max = frames.length - 1; seeker.value = 0; }
-
-        showFrame(0);
-        playVideo();
-    }
-
-    function showFrame(index) {
-        if (!videoFrames || videoFrames.length === 0) return;
-        if (index < 0 || index >= videoFrames.length) return;
-        const img = document.getElementById('video-screen');
-        if (!img) return;
-        img.src = "data:image/jpeg;base64," + videoFrames[index];
-        
-        document.getElementById('video-seeker').value = index;
-        document.getElementById('frame-counter').innerText = `${index + 1}/${videoFrames.length}`;
-        currentFrameIdx = index;
-    }
-
-    function playVideo() {
-        if (isPlaying) return;
-        isPlaying = true;
-        document.getElementById('replay-overlay').style.display = 'none';
-        if (currentFrameIdx >= videoFrames.length - 1) currentFrameIdx = 0;
-
-        playInterval = setInterval(() => {
-            currentFrameIdx++;
-            if (currentFrameIdx >= videoFrames.length) {
-                pauseVideo();
-                document.getElementById('replay-overlay').style.display = 'flex';
-            } else {
-                showFrame(currentFrameIdx);
-            }
-        }, 1000 / FPS);
-    }
-
-    function pauseVideo() {
-        isPlaying = false;
-        clearInterval(playInterval);
-    }
-
-    document.getElementById('video-seeker').addEventListener('input', function() {
-        pauseVideo();
-        showFrame(parseInt(this.value));
-    });
-
-    async function exportAndDownload() {
-        if (!videoFrames.length) { alert("No video data!"); return; }
-        let btn = document.getElementById('btn-save-video');
-        let oldText = btn.innerText;
-        btn.innerText = "⏳ PROCESSING..."; btn.disabled = true;
-
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        const tempImg = new Image();
-        tempImg.src = "data:image/jpeg;base64," + videoFrames[0];
-        await new Promise(r => tempImg.onload = r);
-        canvas.width = tempImg.width; canvas.height = tempImg.height;
-
-        const stream = canvas.captureStream(FPS);
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-        const chunks = [];
-        recorder.ondataavailable = e => chunks.push(e.data);
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `WEBCAM_${Date.now()}.webm`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            btn.innerText = oldText; btn.disabled = false;
-        };
-        recorder.start();
-        for (let i = 0; i < videoFrames.length; i++) {
-            await new Promise(resolve => {
-                const img = new Image();
-                img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
-                img.src = "data:image/jpeg;base64," + videoFrames[i];
-            });
-            await new Promise(r => setTimeout(r, 1000/FPS));
-        }
-        recorder.stop();
-    }
-
-    document.addEventListener('keydown', function(e) {
-        if (e.code === 'Space' && e.target.tagName === 'BUTTON') e.preventDefault();
-    }, true);
-
-    window.onload = connect;
-</script>
+    <!-- JavaScript Modules -->
+    <script type="module" src="/static/js/main.js"></script>
 </body>
 </html>
