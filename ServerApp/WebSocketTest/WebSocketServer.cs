@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Text.Json;
+using System.IO;
+using System.Collections.Generic;
 
 namespace WebSocketTest
 {
@@ -17,10 +19,32 @@ namespace WebSocketTest
         private WebSocket? _currentSocket;
         private bool _isRunning = false;
         private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1); // Đồng bộ SendAsync
+        private readonly FileManager _fileManager;
 
         public SimpleWebSocketServer(Action<string> loggerMethod)
         {
             _logger = loggerMethod;
+            // init FileManager rooted at the app base directory
+            try
+            {
+                // Root directory để truy cập file: C:\ (hoặc có thể config)
+                _fileManager = new FileManager(@"C:\", 
+                    maxStreamFileSizeBytes: 500L * 1024 * 1024); // 500MB limit
+            }
+            catch (Exception ex)
+            {
+                _logger?.Invoke("FileManager init error: " + ex.Message);
+                try
+                {
+                    // Fallback to user home directory
+                    string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                    _fileManager = new FileManager(homeDir);
+                }
+                catch
+                {
+                    _logger?.Invoke("Failed to initialize FileManager with fallback");
+                }
+            }
         }
 
         public async void Start(string url)
@@ -248,6 +272,73 @@ namespace WebSocketTest
                     case "killProcess": // Diệt Process theo ID (Force kill)
                         if (int.TryParse(arg, out int pid)) return KillProcessByPid(pid);
                         return JsonError("PID phải là số");
+
+                    case "list_dir":
+                        // arg = path
+                        // Run listing asynchronously and send via websocket
+                        var listSocket = _currentSocket;
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var entries = await _fileManager.ListDirectoryAsync(arg);
+                                var items = entries.Select(e => new
+                                {
+                                    name = e.Name,
+                                    fullPath = e.FullPath,
+                                    isDirectory = e.IsDirectory,
+                                    size = e.Size,
+                                    lastModified = e.LastModified
+                                }).ToList();
+
+                                var payload = new { type = "file_list", path = arg, items = items };
+                                string json = JsonSerializer.Serialize(payload);
+                                if (listSocket?.State == WebSocketState.Open) await SendToClientAsync(json);
+                            }
+                            catch (Exception ex)
+                            {
+                                if (listSocket?.State == WebSocketState.Open) await SendToClientAsync(JsonError("List error: " + ex.Message));
+                            }
+                        });
+                        return JsonInfo("Listing directory...");
+
+                    case "download_file":
+                        // arg = path
+                        var dlSocket = _currentSocket;
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var meta = await _fileManager.GetFileMetadataAsync(arg);
+                                if (dlSocket?.State != WebSocketState.Open) return;
+
+                                var start = new { type = "file_start", path = arg, size = meta.Size, contentType = meta.ContentType };
+                                await SendToClientAsync(JsonSerializer.Serialize(start));
+
+                                await using var fs = await _fileManager.GetFileStreamAsync(arg);
+                                byte[] buffer = new byte[64 * 1024];
+                                int read;
+                                int index = 0;
+                                while ((read = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                                {
+                                    if (dlSocket?.State != WebSocketState.Open) break;
+                                    string b64 = Convert.ToBase64String(buffer, 0, read);
+                                    var chunk = new { type = "file_chunk", index = index++, data = b64 };
+                                    await SendToClientAsync(JsonSerializer.Serialize(chunk));
+                                }
+
+                                if (dlSocket?.State == WebSocketState.Open)
+                                {
+                                    var end = new { type = "file_end", path = arg };
+                                    await SendToClientAsync(JsonSerializer.Serialize(end));
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                if (dlSocket?.State == WebSocketState.Open) await SendToClientAsync(JsonError("Download error: " + ex.Message));
+                            }
+                        });
+                        return JsonInfo("Starting download...");
 
                     default:
                         if (cmd == "PING") return "PONG";
