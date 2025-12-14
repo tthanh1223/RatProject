@@ -41,6 +41,20 @@ async def read_root(request: Request):
     """
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """
+    Login page - hiển thị login.html
+    """
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/api/get-local-ip")
+async def get_ip():
+    """
+    API endpoint để lấy local IP
+    """
+    return get_local_ip()
+
 if __name__ == "__main__":
     # Lấy IP tự động
     local_ip = get_local_ip()
