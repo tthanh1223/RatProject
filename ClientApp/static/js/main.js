@@ -9,15 +9,29 @@ import { ScreenCaptureManager } from './features/screen.js';
 import { KeyloggerManager } from './features/keylogger.js';
 import { WebcamManager } from './features/webcam.js';
 import { PowerManager } from './features/power.js';
-import { FileManagerManager } from './features/filemanager.js';
 import { parseQueryString, preventSpaceKeyOnButtons } from './utils/helpers.js';
 
 class Application {
     constructor() {
-        // Parse query params
-        const { serverIp } = parseQueryString();
-        const wsUrl = `ws://${serverIp}:8080/`;
+        // ✅ LẤY SERVER IP TỪ URL PARAMS
+        const urlParams = new URLSearchParams(window.location.search);
+        const serverIP = urlParams.get('server');
         
+        if (!serverIP) {
+            // Không có server IP → redirect về login
+            window.location.href = '/';
+            return;
+        }
+        
+        // Kiểm tra format IP
+        if (!this.isValidIP(serverIP)) {
+            alert('Invalid server IP format!');
+            window.location.href = '/';
+            return;
+        }
+
+        // Construct WebSocket URL với IP từ login
+        const wsUrl = `ws://${serverIP}:8080/`;
         console.log(`Connecting to: ${wsUrl}`);
         
         // Initialize core services
@@ -42,15 +56,35 @@ class Application {
         this.ws.connect();
     }
 
+    // ✅ VALIDATE IP ADDRESS
+    isValidIP(ip) {
+        const regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        return regex.test(ip);
+    }
+
     setupGlobalListeners() {
         // WebSocket connection events
         this.ws.on('connected', () => {
             this.status.setOnline();
+            this.logger.log('✅ Connected to server');
             this.refreshCurrentTab();
         });
 
         this.ws.on('disconnected', () => {
             this.status.setOffline();
+            this.logger.log('❌ Disconnected from server');
+            
+            // ✅ TỰ ĐỘNG REDIRECT VỀ LOGIN SAU 3 GIÂY
+            setTimeout(() => {
+                if (confirm('Connection lost. Return to login page?')) {
+                    window.location.href = '/';
+                }
+            }, 3000);
+        });
+
+        // Handle handshake message
+        this.ws.on('handshake', (data) => {
+            this.logger.log(`🤝 Server: ${data.server_name} v${data.version}`);
         });
 
         // Handle general status messages
@@ -100,11 +134,12 @@ class Application {
         if (val && this.ws.isConnected()) {
             this.ws.send(val);
             this.logger.log("ME: " + val);
-        input.value = '';
+            input.value = '';
         }
     }
 }
+
 // Initialize app when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
-window.app = new Application();
+    window.app = new Application();
 });

@@ -47,6 +47,7 @@ namespace WebSocketTest
             }
         }
 
+        // Trong hàm Start(), xử lý HTTP request song song với WebSocket
         public async void Start(string url)
         {
             _listener = new HttpListener();
@@ -54,19 +55,49 @@ namespace WebSocketTest
             _listener.Start();
             _isRunning = true;
             _logger($"Server đã khởi động tại: {url}");
-            _logger($"Để kết nối từ máy khác, dùng: ws://<IP_MÁCHNA_NÀY>:8080/");
-            _logger($"Truy cập từ máy khác: ws://<IP_CỦA_MÁY_NÀY>:8080/");
 
             try
             {
                 while (_listener.IsListening && _isRunning)
                 {
                     var context = await _listener.GetContextAsync();
-                    if (context.Request.IsWebSocketRequest) _ = ProcessClient(context);
-                    else { context.Response.StatusCode = 400; context.Response.Close(); }
+                    
+                    // ✅ XỬ LÝ HTTP HEALTH CHECK
+                    if (context.Request.Url?.AbsolutePath == "/health")
+                    {
+                        await HandleHealthCheck(context);
+                    }
+                    else if (context.Request.IsWebSocketRequest)
+                    {
+                        _ = ProcessClient(context);
+                    }
+                    else 
+                    { 
+                        context.Response.StatusCode = 400; 
+                        context.Response.Close(); 
+                    }
                 }
             }
             catch (Exception ex) { _logger("Lỗi Server: " + ex.Message); }
+        }
+
+        // ✅ ENDPOINT HEALTH CHECK
+        private async Task HandleHealthCheck(HttpListenerContext context)
+        {
+            var response = new 
+            { 
+                status = "ok", 
+                server = "RAT_SERVER_V1.0",
+                version = "1.0"
+            };
+            
+            byte[] buffer = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response));
+            context.Response.ContentType = "application/json";
+            context.Response.ContentLength64 = buffer.Length;
+            context.Response.StatusCode = 200;
+            
+            await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+            context.Response.Close();
         }
 
         public void Stop()
@@ -86,7 +117,15 @@ namespace WebSocketTest
             var wsContext = await context.AcceptWebSocketAsync(null);
             _currentSocket = wsContext.WebSocket;
             _logger("Client đã kết nối!");
-            await SendToClient(JsonInfo("Server Ready"));
+            // ✅ GỬI HANDSHAKE NGAY KHI KẾT NỐI
+            var handshake = new 
+            { 
+                type = "handshake", 
+                server_name = "RAT_SERVER_V1.0",
+                version = "1.0",
+                timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            };
+            await SendToClient(JsonSerializer.Serialize(handshake));
 
             byte[] buffer = new byte[1024 * 1024]; // 1MB buffer cho dữ liệu lớn
 
