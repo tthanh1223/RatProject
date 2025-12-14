@@ -1,4 +1,6 @@
 using System;
+using System.Net;
+using System.Net.Sockets;
 using System.Windows.Forms;
 
 namespace WebSocketTest
@@ -17,20 +19,51 @@ namespace WebSocketTest
         {
             try 
             {
-                // Truyền hàm LogToUI vào server để nó gọi khi cần in log
                 _server = new SimpleWebSocketServer(LogToUI);
-                // Thay đổi: Lắng nghe trên 0.0.0.0 để cho phép kết nối từ máy khác
-                _server.Start("http://localhost:8080/");
+                
+                // ✅ SỬA: Dùng + để lắng nghe trên TẤT CẢ IP
+                // Lưu ý: Phải chạy Visual Studio với quyền Administrator
+                _server.Start("http://+:8080/");
                 
                 _serverRunning = true;
                 btnStart.Enabled = false;
                 btnStart.Text = "Running...";
                 btnStop.Enabled = true;
-                LogToUI("Server sẵn sàng. Hãy kết nối Client!");
+                
+                // ✅ Hiển thị IP của máy để người dùng biết
+                string localIP = GetLocalIPAddress();
+                LogToUI("═══════════════════════════════════════════════");
+                LogToUI($"✅ Server đã khởi động thành công!");
+                LogToUI($"🔗 Để kết nối từ máy KHÁC, dùng: ws://{localIP}:8080/");
+                LogToUI($"🔗 Để test trên máy này, dùng: ws://localhost:8080/");
+                LogToUI("═══════════════════════════════════════════════");
+            }
+            catch (HttpListenerException ex) when (ex.ErrorCode == 5)
+            {
+                MessageBox.Show(
+                    "❌ LỖI: Access Denied!\n\n" +
+                    "Bạn phải chạy Visual Studio với quyền ADMINISTRATOR.\n\n" +
+                    "Cách fix:\n" +
+                    "1. Đóng Visual Studio\n" +
+                    "2. Click phải vào Visual Studio → Run as Administrator\n" +
+                    "3. Mở lại project và chạy",
+                    "Lỗi quyền truy cập",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Lỗi (Chạy Admin chưa?): " + ex.Message);
+                MessageBox.Show(
+                    $"❌ Lỗi khởi động server:\n\n{ex.Message}\n\n" +
+                    "Kiểm tra:\n" +
+                    "- Chạy Visual Studio với quyền Administrator\n" +
+                    "- Port 8080 có bị chiếm không?\n" +
+                    "- Firewall có chặn không?",
+                    "Lỗi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
         }
 
@@ -54,7 +87,6 @@ namespace WebSocketTest
             }
         }
 
-        // SỰ KIỆN MỚI: Bấm nút Gửi
         private async void btnSend_Click(object sender, EventArgs e)
         {
             if (_server == null) return;
@@ -62,22 +94,18 @@ namespace WebSocketTest
             string msg = txtMessage.Text.Trim();
             if (!string.IsNullOrEmpty(msg))
             {
-                // Gọi hàm gửi tin nhắn của Server
                 await _server.SendToClient(msg);
-                
-                // Xóa ô nhập sau khi gửi
                 txtMessage.Clear();
                 txtMessage.Focus();
             }
         }
 
-        // Cho phép ấn Enter để gửi luôn
         private void txtMessage_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
                 btnSend_Click(this, new EventArgs());
-                e.SuppressKeyPress = true; // Chặn tiếng 'ding' của Windows
+                e.SuppressKeyPress = true;
             }
         }
 
@@ -90,6 +118,26 @@ namespace WebSocketTest
             }
             txtLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {msg}\n");
             txtLog.ScrollToCaret();
+        }
+
+        // ✅ HÀM LẤY IP CỦA MÁY
+        private string GetLocalIPAddress()
+        {
+            try
+            {
+                using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                {
+                    socket.Connect("8.8.8.8", 65530);
+                    IPEndPoint? endPoint = socket.LocalEndPoint as IPEndPoint;
+                    if (endPoint != null)
+                    {
+                        return endPoint.Address.ToString();
+                    }
+                }
+            }
+            catch { }
+            
+            return "127.0.0.1";
         }
     }
 }
