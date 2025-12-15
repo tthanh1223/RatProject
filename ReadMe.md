@@ -37,11 +37,11 @@ Anh em có code gì thì nhớ pull về sửa commit, branch main luôn không 
 
 #TODO:
 - Client Side
-- [ ] Xóa tính năng Auto Discovery trong login page
-- [ ] Tạo UI cho Power: 2 nút Shutdown với Restart to đùng
+- [x] Xóa tính năng Auto Discovery trong login page
+- [x] Tạo UI cho Power: 2 nút Shutdown với Restart to đùng
 - Server Side
 - [x] Fix logic keylog theo session
-- [ ] Fix logic webcam theo duration (in-memory size)
+- [x] Fix logic webcam theo duration 
 - [x] Tạo login test 2 máy (đã test được trên 2 máy - nhưng còn hơi phức tạo) => 
 - [ ] Tạo file bat chạy cho phía Server
 - [x] Modulize lại ServerApp
