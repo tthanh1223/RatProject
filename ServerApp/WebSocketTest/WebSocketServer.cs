@@ -102,7 +102,6 @@ namespace WebSocketTest
             }
         }
 
-        // --- XỬ LÝ LỆNH ---
         private string HandleCommand(string command)
         {
             if (_router != null) return _router.Dispatch(command);
