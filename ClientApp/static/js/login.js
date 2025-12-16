@@ -16,6 +16,12 @@ class LoginManager {
 
     // Validate IP:PORT format
     validateAddress(address) {
+        if (address.toLowerCase().startsWith("localhost:")) {
+            const port = parseInt(address.split(':')[1]);
+            // Kiểm tra port hợp lệ
+            if (port >= 1 && port <= 65535) return address;
+            return null;
+        }
         const regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):([0-9]{1,5})$/;
         const match = address.match(regex);
         if (!match) return null;
