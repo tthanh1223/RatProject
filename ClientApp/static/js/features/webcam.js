@@ -70,6 +70,10 @@ export class WebcamManager {
         });
 
         // WebSocket events
+        this.ws.on('rec_started', () => {
+            this.handleCameraStarted();
+        });
+
         this.ws.on('video_start', (data) => {
             console.log('🔴 [DEBUG] video_start received:', data);
             this.frames = [];
@@ -108,10 +112,7 @@ export class WebcamManager {
     }
 
     startRecording() {
-        const duration = parseInt(this.elements.durationInput.value);
-        
-        console.log('🔴 [DEBUG] startRecording called, duration:', duration);
-        
+        const duration = parseInt(this.elements.durationInput.value);        
         if (duration < 5 || duration > 300) {
             alert('⚠️ Duration phải từ 5-300 giây!');
             return;
@@ -125,27 +126,50 @@ export class WebcamManager {
         this.elements.startRecBtn.classList.add('hidden');
         this.elements.stopRecBtn.classList.remove('hidden');
         this.elements.durationInput.disabled = true;
+
         this.elements.recStatus.classList.remove('hidden');
+        this.elements.recStatus.innerText = "🔌 Đang khởi động camera..."; // Thông báo chờ
+        this.elements.recTimer.innerText = "--:--";
+
         this.elements.status.style.display = 'none';
         this.elements.container.classList.add('hidden');
         this.elements.loading.style.display = 'none';
         
-        // Start timer
-        this.updateRecTimer(0, duration);
-        this.timerInterval = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-            this.updateRecTimer(elapsed, duration);
-        }, 100);
+        // // Start timer
+        // this.updateRecTimer(0, duration);
+        // this.timerInterval = setInterval(() => {
+        //     const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+        //     this.updateRecTimer(elapsed, duration);
+        // }, 100);
         
         // ✅ GỬI COMMAND
-        const command = `start_cam ${duration}`;
-        console.log('🔴 [DEBUG] Sending command:', command);
-        console.log('🔴 [DEBUG] WebSocket connected:', this.ws.isConnected());
-        
+        const command = `start_cam ${duration}`;        
         const sent = this.ws.send(command);
-        console.log('🔴 [DEBUG] Command sent successfully:', sent);
-        
+    
         this.logger.log(`> Recording started (${duration}s)`);
+    }
+    // Ham moi: chay khi server bao cam da bat
+    handleCameraStarted() {
+        this.isRecording = true;
+        this.recordingStartTime = Date.now();
+        this.elements.recStatus.innerText = "🔴 ĐANG GHI HÌNH"; 
+        this.updateRecTimer(0, this.recordingDuration);
+        
+        // Xóa interval cũ nếu có cho chắc ăn
+        if (this.timerInterval) clearInterval(this.timerInterval);
+
+        this.timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+            
+            // Tự động dừng UI nếu vượt quá thời gian (đề phòng mạng lag không nhận được video_start)
+            if (elapsed >= this.recordingDuration) {
+                 clearInterval(this.timerInterval);
+            }
+            
+            this.updateRecTimer(elapsed, this.recordingDuration);
+        }, 100);
+
+        this.logger.log(`> Camera active. Timer started.`);
     }
 
     stopRecording() {
@@ -201,9 +225,11 @@ export class WebcamManager {
         this.elements.screen.src = "data:image/jpeg;base64," + this.frames[index];
         this.elements.seeker.value = index;
         
-        const currentTime = index / this.FPS;
-        const totalTime = this.frames.length / this.FPS;
-        this.elements.timeCounter.textContent = this.formatTime(currentTime) + ' / ' + this.formatTime(totalTime);
+        const currentTime = Math.floor(index / this.FPS) + 1;
+        console.log(`👉 FINAL Current Seconds: ${currentTime} (Should be >= 1)`);        
+        const totalTime = Math.ceil(this.frames.length / this.FPS);
+        this.elements.timeCounter.textContent = 
+                this.formatTime(currentTime) + ' / ' + this.formatTime(totalTime);
         
         this.currentFrameIdx = index;
     }

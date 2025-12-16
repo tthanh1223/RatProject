@@ -42,7 +42,10 @@ namespace WebSocketTest.Services
             try
             {
                 await sendAsync(JsonResponse.Info($"Khởi động camera ({durationSeconds}s)..."));
-                
+                // Send message de client bat bo dem gio chi khi cam da mo
+                var startedMsg = new {type = "rec_started"};
+                await sendAsync(JsonSerializer.Serialize(startedMsg));
+                // Start record
                 await RecordFramesAsync(durationSeconds, _recordingCts.Token);
                                 
                 if (_frames.Count > 0)
