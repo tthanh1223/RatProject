@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using WebSocketTest.Core;
-using WebSocketTest.Utils;
 using WebSocketTest.Models;
 
 namespace WebSocketTest.Services
