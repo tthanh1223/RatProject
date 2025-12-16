@@ -79,29 +79,58 @@ namespace WebSocketTest.Services
 
         public async Task DownloadFileAsync(string path, Func<string, Task> sendAsync)
         {
+            // ✅ NORMALIZE PATH TRƯỚC KHI GỬI
+            string normalizedPath = NormalizePath(path);
+            
             var meta = await GetFileMetadataAsync(path);
             if (sendAsync == null) return;
 
-            var start = new { type = "file_start", path = path, size = meta.Size, contentType = meta.ContentType };
+            // Gửi normalized path
+            var start = new { 
+                type = "file_start", 
+                path = normalizedPath,  // ← Đã normalize
+                size = meta.Size, 
+                contentType = meta.ContentType 
+            };
             await sendAsync(JsonSerializer.Serialize(start));
 
             await using var fs = await GetFileStreamAsync(path);
-            byte[] buffer = new byte[64 * 1024];
+            byte[] buffer = new byte[32 * 1024];
             int read;
             int index = 0;
-            int totalChunks = 0;
 
             while ((read = await fs.ReadAsync(buffer, 0, buffer.Length)) > 0)
             {
                 string b64 = Convert.ToBase64String(buffer, 0, read);
-                var chunk = new { type = "file_chunk", index = index, path = path, data = b64 };
+                
+                // ✅ Gửi normalized path
+                var chunk = new { 
+                    type = "file_chunk", 
+                    index = index, 
+                    path = normalizedPath,  // ← Đã normalize
+                    data = b64 
+                };
                 await sendAsync(JsonSerializer.Serialize(chunk));
                 index++;
-                totalChunks++;
             }
 
-            var end = new { type = "file_end", path = path, totalChunks = totalChunks };
+            var end = new { 
+                type = "file_end", 
+                path = normalizedPath,  // ← Đã normalize
+                totalChunks = index 
+            };
             await sendAsync(JsonSerializer.Serialize(end));
+        }
+
+        // ✅ THÊM HÀM NORMALIZE
+        private string NormalizePath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return "";
+            
+            return path
+                .Replace("/", "\\")
+                .Replace("\\\\", "\\")
+                .ToUpperInvariant();  // Windows case-insensitive
         }
 
         public async Task<IEnumerable<FileEntry>> ListDirectoryEntriesAsync(string path, ListOptions? options = null)
