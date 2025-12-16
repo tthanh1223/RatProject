@@ -89,11 +89,6 @@ export class WebcamManager {
                 data.frames.forEach(frame => {
                     this.frames.push(frame.data);
                 });
-                
-                if (this.isRecording) {
-                    const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-                    this.updateRecTimer(elapsed, this.recordingDuration);
-                }
             }
         });
 
@@ -127,20 +122,15 @@ export class WebcamManager {
         this.elements.stopRecBtn.classList.remove('hidden');
         this.elements.durationInput.disabled = true;
 
-        this.elements.recStatus.classList.remove('hidden');
-        this.elements.recStatus.innerText = "🔌 Đang khởi động camera..."; // Thông báo chờ
-        this.elements.recTimer.innerText = "--:--";
-
         this.elements.status.style.display = 'none';
         this.elements.container.classList.add('hidden');
         this.elements.loading.style.display = 'none';
-        
-        // // Start timer
-        // this.updateRecTimer(0, duration);
-        // this.timerInterval = setInterval(() => {
-        //     const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-        //     this.updateRecTimer(elapsed, duration);
-        // }, 100);
+
+        this.elements.recStatus.classList.remove('hidden');
+        if (this.elements.recTimer.classList.contains('hidden')){
+            this.elements.recTimer.classList.remove('hidden');
+        }
+        this.updateRecTimer(0, duration);        
         
         // ✅ GỬI COMMAND
         const command = `start_cam ${duration}`;        
@@ -152,18 +142,24 @@ export class WebcamManager {
     handleCameraStarted() {
         this.isRecording = true;
         this.recordingStartTime = Date.now();
-        this.elements.recStatus.innerText = "🔴 ĐANG GHI HÌNH"; 
-        this.updateRecTimer(0, this.recordingDuration);
         
-        // Xóa interval cũ nếu có cho chắc ăn
+        // Đổi trạng thái thành: Đang ghi hình
+
+        // Xóa timer cũ nếu có
         if (this.timerInterval) clearInterval(this.timerInterval);
 
+        // Reset về 0 ngay lập tức
+        this.updateRecTimer(0, this.recordingDuration);
+
+        // Bắt đầu đếm
         this.timerInterval = setInterval(() => {
             const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
             
-            // Tự động dừng UI nếu vượt quá thời gian (đề phòng mạng lag không nhận được video_start)
+            // Nếu quá thời gian thì dừng đếm UI (để số đẹp)
             if (elapsed >= this.recordingDuration) {
+                 this.updateRecTimer(this.recordingDuration, this.recordingDuration);
                  clearInterval(this.timerInterval);
+                 return;
             }
             
             this.updateRecTimer(elapsed, this.recordingDuration);
@@ -173,7 +169,6 @@ export class WebcamManager {
     }
 
     stopRecording() {
-        console.log('🔴 [DEBUG] stopRecording called');
         
         if (!this.isRecording) {
             console.log('🔴 [DEBUG] Not recording, ignoring');
