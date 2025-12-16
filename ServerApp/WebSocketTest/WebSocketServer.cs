@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.Json;
 using System.IO;
 using System.Collections.Generic;
+using WebSocketTest.Models;
 
 namespace WebSocketTest
 {
@@ -18,9 +19,8 @@ namespace WebSocketTest
         private Core.Server? _server;
         private Core.Router? _router;
         private readonly Action<string> _logger = _ => { };
-        private WebSocket? _currentSocket;
+        private Core.Connection? _client;        
         private bool _isRunning = false;
-        private readonly SemaphoreSlim _sendSemaphore = new SemaphoreSlim(1, 1); // Đồng bộ SendAsync
         public SimpleWebSocketServer(Action<string> loggerMethod)
         {
             if (loggerMethod == null) throw new ArgumentNullException(nameof(loggerMethod));
@@ -45,7 +45,7 @@ namespace WebSocketTest
             var screenService = new Services.ScreenService();
             var webcamService = new Services.WebcamService();
 
-            _router = new Core.Router(appService, processService, fileService, screenService, webcamService, SendToClientAsync);
+            _router = new Core.Router(appService, processService, fileService, screenService, webcamService, SendToClient);
         }
 
         // Trong hàm Start(), xử lý HTTP request song song với WebSocket
@@ -55,7 +55,6 @@ namespace WebSocketTest
             _server = new Core.Server(_logger);
             _ = _server.Start(url, ProcessClient);
         }
-
         // NOTE: health check handled by Core.Server; leave HandleHealthCheck in place for parity
         private async Task HandleHealthCheck(HttpListenerContext context)
         {
@@ -75,16 +74,12 @@ namespace WebSocketTest
             context.Response.Close();
         }
 
-        public void Stop()
-        {
-            _server?.Stop();
-        }
-        
+        public void Stop() => _server?.Stop();
 
         private async Task ProcessClient(HttpListenerContext context)
         {
             var wsContext = await context.AcceptWebSocketAsync(null);
-            _currentSocket = wsContext.WebSocket;
+            _client = new Core.Connection(wsContext.WebSocket);
             _logger("Client đã kết nối!");
             // ✅ GỬI HANDSHAKE NGAY KHI KẾT NỐI
             var handshake = new 
@@ -94,164 +89,39 @@ namespace WebSocketTest
                 version = "1.0",
                 timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
             };
-            await SendToClient(JsonSerializer.Serialize(handshake));
+            await _client.SendAsync(JsonSerializer.Serialize(handshake));
 
             byte[] buffer = new byte[10 * 1024 * 1024]; // 10MB buffer cho dữ liệu lớn
 
             try
             {
-                while (_currentSocket.State == WebSocketState.Open)
+                while (_client.IsConnected)
                 {
-                    var result = await _currentSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    var result = await _client.Socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                     if (result.MessageType == WebSocketMessageType.Close) break;
 
                     string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
                     _logger($"[Client]: {message}");
 
                     string response = _router != null ? _router.Dispatch(message) : HandleCommand(message);
-                    await SendToClient(response);
+                    await _client.SendAsync(response);
                 }
             }
-            catch (OperationCanceledException) { _logger("Client timeout hoặc disconnect"); }
-            catch (WebSocketException ex) { _logger($"WebSocket error: {ex.Message}"); }
             catch (Exception ex) { _logger("Lỗi kết nối: " + ex.Message); }
             finally 
             { 
-                // Gracefully close WebSocket
-                if (_currentSocket != null)
-                {
-                    try
-                    {
-                        if (_currentSocket.State == WebSocketState.Open)
-                        {
-                            await _currentSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server closing", CancellationToken.None);
-                        }
-                    }
-                    catch { }
-                    finally
-                    {
-                        _currentSocket.Dispose();
-                        _currentSocket = null;
-                    }
-                }
+                // Dọn dẹp
+                _client?.Dispose();
+                _client = null;
             }
         }
 
         public async Task SendToClient(string msg)
         {
-            if (_currentSocket != null && _currentSocket.State == WebSocketState.Open)
+            // ✅ THAY ĐỔI: Chỉ cần gọi _client làm việc
+            if (_client != null)
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(msg);
-                try
-                {
-                    await _sendSemaphore.WaitAsync();
-                    try
-                    {
-                        await _currentSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
-                    }
-                    finally
-                    {
-                        _sendSemaphore.Release();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger($"Lỗi gửi: {ex.Message}");
-                }
-            }
-        }
-
-        // Gửi dữ liệu lớn (video, ảnh) thành nhiều chunks
-        public async Task SendLargeData(List<string> frameList, string type)
-        {
-            if (_currentSocket == null || _currentSocket.State != WebSocketState.Open) return;
-
-            try
-            {
-                // Gửi thông báo bắt đầu
-                var startMsg = new { type = type + "_start", count = frameList.Count };
-                await SendToClientAsync(JsonSerializer.Serialize(startMsg));
-
-                // Gửi frames theo batch (30 frames một lần) để tăng tốc độ
-                const int batchSize = 30;
-                for (int batchStart = 0; batchStart < frameList.Count; batchStart += batchSize)
-                {
-                    if (_currentSocket.State != WebSocketState.Open) 
-                    {
-                        _logger($"WebSocket closed at batch {batchStart}/{frameList.Count}");
-                        break;
-                    }
-
-                    int batchEnd = Math.Min(batchStart + batchSize, frameList.Count);
-                    var batch = new List<object>();
-                    
-                    for (int i = batchStart; i < batchEnd; i++)
-                    {
-                        batch.Add(new { index = i, data = frameList[i] });
-                    }
-
-                    try
-                    {
-                        var batchData = new { type = type + "_batch", frames = batch };
-                        string json = JsonSerializer.Serialize(batchData);
-                        byte[] bytes = Encoding.UTF8.GetBytes(json);
-
-                        await _sendSemaphore.WaitAsync();
-                        try
-                        {
-                            await _currentSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
-                        }
-                        finally
-                        {
-                            _sendSemaphore.Release();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger($"Lỗi gửi batch {batchStart}-{batchEnd}: {ex.Message}");
-                        break;
-                    }
-                    
-                    // Delay nhỏ giữa batches (không cần delay cho mỗi frame)
-                    if (batchEnd < frameList.Count) await Task.Delay(10);
-                }
-
-                // Gửi thông báo kết thúc (nếu còn connected)
-                if (_currentSocket.State == WebSocketState.Open)
-                {
-                    var endMsg = new { type = type + "_end" };
-                    await SendToClientAsync(JsonSerializer.Serialize(endMsg));
-                    _logger($"Gửi {frameList.Count} frames ({type}) thành công");
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger($"Lỗi gửi dữ liệu lớn: {ex.Message}");
-            }
-        }
-
-        // SendToClientAsync dùng semaphore - dùng cho async context
-        private async Task SendToClientAsync(string msg)
-        {
-            if (_currentSocket != null && _currentSocket.State == WebSocketState.Open)
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(msg);
-                try
-                {
-                    await _sendSemaphore.WaitAsync();
-                    try
-                    {
-                        await _currentSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
-                    }
-                    finally
-                    {
-                        _sendSemaphore.Release();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger($"Lỗi gửi: {ex.Message}");
-                }
+                await _client.SendAsync(msg);
             }
         }
 
@@ -259,15 +129,7 @@ namespace WebSocketTest
         private string HandleCommand(string command)
         {
             if (_router != null) return _router.Dispatch(command);
-            return JsonInfo("Router not initialized");
+            return JsonResponse.Info("Router not initialized");
         }
-
-        // --- LOGIC APP ---
-// Legacy handlers were moved to Legacy/OldCommandHandlers.cs to keep repository tidy and avoid duplication
-
-        // Helpers
-        private string JsonSuccess(string msg) => $"{{\"trang_thai\": \"thanh_cong\", \"thong_bao\": \"{msg}\"}}";
-        private string JsonError(string msg) => $"{{\"trang_thai\": \"loi\", \"thong_bao\": \"{msg}\"}}";
-        private string JsonInfo(string msg) => $"{{\"trang_thai\": \"info\", \"thong_bao\": \"{msg}\"}}";
     }
 }
