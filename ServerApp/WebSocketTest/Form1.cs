@@ -9,6 +9,9 @@ namespace WebSocketTest
 {
     public partial class Form1 : Form
     {
+        // ✅ KHAI BÁO PORT Ở ĐÂY (Chỉ cần sửa số này là ăn toàn bộ code)
+        private const int PORT = 8080;
+        
         private SimpleWebSocketServer? _server;
         private bool _serverRunning = false;
 
@@ -41,9 +44,9 @@ namespace WebSocketTest
                 if (!CheckUrlReservation())
                 {
                     var result = MessageBox.Show(
-                        "❌ PHÁT HIỆN: Windows chưa cho phép bind vào http://+:8080/\n\n" +
+                        $"❌ PHÁT HIỆN: Windows chưa cho phép bind vào http://+:{PORT}/\n\n" +
                         "Bạn cần chạy lệnh sau trong CMD (Administrator):\n\n" +
-                        "netsh http add urlacl url=http://+:8080/ user=Everyone\n\n" +
+                        $"netsh http add urlacl url=http://+:{PORT}/ user=Everyone\n\n" +
                         "Bấm YES để tự động chạy lệnh này (cần quyền Admin)\n" +
                         "Bấm NO để copy lệnh và tự chạy thủ công",
                         "URL Reservation Required",
@@ -67,7 +70,7 @@ namespace WebSocketTest
                             MessageBox.Show(
                                 "❌ Không thể thêm URL reservation tự động.\n\n" +
                                 "Vui lòng chạy lệnh sau trong CMD (Administrator):\n\n" +
-                                "netsh http add urlacl url=http://+:8080/ user=Everyone",
+                                $"netsh http add urlacl url=http://+:{PORT}/ user=Everyone",
                                 "Failed",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Error
@@ -77,7 +80,7 @@ namespace WebSocketTest
                     }
                     else if (result == DialogResult.No)
                     {
-                        Clipboard.SetText("netsh http add urlacl url=http://+:8080/ user=Everyone");
+                        Clipboard.SetText($"netsh http add urlacl url=http://+:{PORT}/ user=Everyone");
                         MessageBox.Show(
                             "✅ Đã copy lệnh vào clipboard!\n\n" +
                             "Mở CMD với quyền Administrator và paste lệnh vào.",
@@ -95,20 +98,20 @@ namespace WebSocketTest
 
                 _server = new SimpleWebSocketServer(LogToUI);
                 
-                // ✅ SỬA: Dùng + để lắng nghe trên TẤT CẢ IP
-                _server.Start("http://+:8080/");
+                // ✅ SỬA: Dùng biến PORT
+                _server.Start($"http://+:{PORT}/");
                 
                 _serverRunning = true;
                 btnStart.Enabled = false;
                 btnStart.Text = "Running...";
                 btnStop.Enabled = true;
                 
-                // ✅ Hiển thị IP của máy để người dùng biết
+                // ✅ Hiển thị IP với đúng PORT
                 string localIP = GetLocalIPAddress();
                 LogToUI("═══════════════════════════════════════════════");
                 LogToUI($"✅ Server đã khởi động thành công!");
-                LogToUI($"🔗 Từ máy KHÁC, kết nối: ws://{localIP}:8080/");
-                LogToUI($"🔗 Từ máy này, kết nối: ws://localhost:8080/");
+                LogToUI($"🔗 Từ máy KHÁC, kết nối: ws://{localIP}:{PORT}/");
+                LogToUI($"🔗 Từ máy này, kết nối: ws://localhost:{PORT}/");
                 LogToUI($"🌐 Server đang lắng nghe trên TẤT CẢ network interfaces");
                 LogToUI("═══════════════════════════════════════════════");
                 
@@ -124,9 +127,9 @@ namespace WebSocketTest
                     "   → Đóng Visual Studio\n" +
                     "   → Click phải → Run as Administrator\n" +
                     "   → Mở lại project\n\n" +
-                    "2. Windows CHƯA cho phép bind vào http://+:8080/\n" +
+                    $"2. Windows CHƯA cho phép bind vào http://+:{PORT}/\n" +
                     "   → Chạy lệnh sau trong CMD (Administrator):\n" +
-                    "   netsh http add urlacl url=http://+:8080/ user=Everyone",
+                    $"   netsh http add urlacl url=http://+:{PORT}/ user=Everyone",
                     "Lỗi quyền truy cập",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error
@@ -138,7 +141,7 @@ namespace WebSocketTest
                     $"❌ Lỗi khởi động server:\n\n{ex.Message}\n\n" +
                     "Kiểm tra:\n" +
                     "- Chạy Visual Studio với quyền Administrator\n" +
-                    "- Port 8080 có bị chiếm không?\n" +
+                    $"- Port {PORT} có bị chiếm không?\n" +
                     "- Đã chạy lệnh netsh http add urlacl chưa?\n" +
                     "- Firewall có chặn không?",
                     "Lỗi",
@@ -255,9 +258,9 @@ namespace WebSocketTest
                     string output = process.StandardOutput.ReadToEnd();
                     process.WaitForExit();
                     
-                    // Kiểm tra xem có URL reservation cho http://+:8080/ không
-                    return output.Contains("http://+:8080/") || 
-                           output.Contains("http://*:8080/");
+                    // Kiểm tra xem có URL reservation cho port hiện tại không
+                    return output.Contains($"http://+:{PORT}/") || 
+                           output.Contains($"http://*:{PORT}/");
                 }
             }
             catch
@@ -274,7 +277,7 @@ namespace WebSocketTest
                 ProcessStartInfo psi = new ProcessStartInfo
                 {
                     FileName = "netsh",
-                    Arguments = "http add urlacl url=http://+:8080/ user=Everyone",
+                    Arguments = $"http add urlacl url=http://+:{PORT}/ user=Everyone",
                     UseShellExecute = true,
                     Verb = "runas", // Request admin
                     CreateNoWindow = true
@@ -297,10 +300,13 @@ namespace WebSocketTest
         {
             try
             {
+                // Tên rule cũng nên có số port để dễ quản lý
+                string ruleName = $"RAT Server Port {PORT}";
+                
                 ProcessStartInfo psi = new ProcessStartInfo
                 {
                     FileName = "netsh",
-                    Arguments = "advfirewall firewall show rule name=\"RAT Server Port 8080\"",
+                    Arguments = $"advfirewall firewall show rule name=\"{ruleName}\"",
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     CreateNoWindow = true
@@ -313,13 +319,13 @@ namespace WebSocketTest
                     
                     if (!output.Contains("Rule Name"))
                     {
-                        LogToUI("⚠️ CẢNH BÁO: Chưa có Firewall rule cho port 8080!");
-                        LogToUI("💡 Chạy lệnh sau để mở firewall:");
-                        LogToUI("   netsh advfirewall firewall add rule name=\"RAT Server Port 8080\" dir=in action=allow protocol=TCP localport=8080");
+                        LogToUI($"⚠️ CẢNH BÁO: Chưa tìm thấy Firewall rule tên \"{ruleName}\"!");
+                        LogToUI("💡 Nếu bạn chưa mở port thủ công, hãy chạy lệnh sau:");
+                        LogToUI($"   netsh advfirewall firewall add rule name=\"{ruleName}\" dir=in action=allow protocol=TCP localport={PORT}");
                     }
                     else
                     {
-                        LogToUI("✅ Firewall rule đã được thiết lập cho port 8080");
+                        LogToUI($"✅ Đã tìm thấy Firewall rule \"{ruleName}\"");
                     }
                 }
             }
