@@ -164,33 +164,19 @@ export class FileManagerManager {
         const { path, size, contentType } = data;
         const normalizedPath = this.normalizePath(path);
         
-        console.log('[DEBUG] file_start received:', { path, size, contentType });
-        console.log('[DEBUG] Normalized path:', normalizedPath);
         this.logger.log(`[FILES] Download start: ${path} (${this.formatSize(size)})`);
         
         if (this.downloadingFiles.has(normalizedPath)) {
-            console.log('[DEBUG] File found in map, updating...');
             this.downloadingFiles.get(normalizedPath).size = size;
             this.downloadingFiles.get(normalizedPath).contentType = contentType;
         } else {
             console.warn('[DEBUG] File NOT found in map:', normalizedPath);
-            console.log('[DEBUG] Available keys:', Array.from(this.downloadingFiles.keys()));
         }
     }
 
     onFileChunkReceived(data) {
         const { path, index, data: b64Data } = data;
         const normalizedPath = this.normalizePath(path);
-        
-        // ✅ LOG SAMPLE
-        if (index % 50 === 0) {
-            console.log(`[DEBUG] Chunk ${index} received:`, {
-                path: path,
-                normalized: normalizedPath,
-                dataLength: b64Data.length,
-                dataSample: b64Data.substring(0, 20) + '...'
-            });
-        }
         
         if (!this.downloadingFiles.has(normalizedPath)) {
             console.error('[DEBUG] ❌ Path mismatch!');
@@ -234,12 +220,7 @@ export class FileManagerManager {
                 missingIndices.push(i);
             }
         }
-        
-        // ✅ LOG CHI TIẾT
-        console.log('[DEBUG] Total chunks expected:', fileInfo.chunks.length);
-        console.log('[DEBUG] Chunks received:', chunks.length);
-        console.log('[DEBUG] Missing indices:', missingIndices);
-        
+    
         if (missingIndices.length > 0) {
             this.logger.log(`[FILES] ❌ ERROR: Missing ${missingIndices.length} chunks: [${missingIndices.slice(0, 10).join(', ')}...]`);
             return;
@@ -281,16 +262,12 @@ export class FileManagerManager {
                 throw new Error('Empty Base64 string');
             }
             
-            console.log('[DEBUG] Total Base64 length:', concatenated.length);
-            console.log('[DEBUG] Expected file size:', Math.floor(concatenated.length * 3 / 4), 'bytes');
             
             // ✅ DECODE TỪNG PHẦN NẾU QUÁ LỚN (tránh memory overflow)
             const maxChunkSize = 1024 * 1024; // 1MB per decode
             const byteArrays = [];
             
-            if (concatenated.length > maxChunkSize) {
-                console.log('[DEBUG] Large file detected, decoding in chunks...');
-                
+            if (concatenated.length > maxChunkSize) {                
                 for (let i = 0; i < concatenated.length; i += maxChunkSize) {
                     const chunk = concatenated.substring(i, i + maxChunkSize);
                     
