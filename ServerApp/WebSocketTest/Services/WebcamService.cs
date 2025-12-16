@@ -41,7 +41,7 @@ namespace WebSocketTest.Services
 
             try
             {
-                await sendAsync(JsonResponse.Info($"Khởi động camera ({durationSeconds}s)..."));
+                await sendAsync(JsonResponse.Info($"Starting camera ({durationSeconds}s)..."));
                 // Send message de client bat bo dem gio chi khi cam da mo
                 var startedMsg = new {type = "rec_started"};
                 await sendAsync(JsonSerializer.Serialize(startedMsg));
@@ -54,7 +54,7 @@ namespace WebSocketTest.Services
                 }
                 else
                 {
-                    await sendAsync(JsonResponse.Error("Không thể quay video"));
+                    await sendAsync(JsonResponse.Error("Cannot record"));
                 }
             }
             catch (OperationCanceledException)
@@ -66,7 +66,7 @@ namespace WebSocketTest.Services
             }
             catch (Exception ex)
             {
-                await sendAsync(JsonResponse.Error("Lỗi camera: " + ex.Message));
+                await sendAsync(JsonResponse.Error("Camera Error: " + ex.Message));
             }
             finally
             {
@@ -100,7 +100,7 @@ namespace WebSocketTest.Services
                 
                 if (videoDevices.Count == 0)
                 {
-                    throw new Exception("Không tìm thấy camera");
+                    throw new Exception("Can't find camera");
                 }
 
                 // 2. Initialize camera
@@ -149,16 +149,11 @@ namespace WebSocketTest.Services
                             }
                         }
                     }
-                    catch
-                    {
-                        // Ignore individual frame errors to keep recording
-                    }
+                    catch {}
                 };
 
-                // 5. Start camera
                 _videoSource.Start();
 
-                // 6. Wait for completion
                 while (!ct.IsCancellationRequested && _frames.Count < _targetFrameCount)
                 {
                     await Task.Delay(100, ct);
@@ -186,10 +181,7 @@ namespace WebSocketTest.Services
                         _videoSource = null;
                     }
                 }
-                catch
-                {
-                    // Ignore cleanup errors
-                }
+                catch {} // Ignore
                 finally
                 {
                     _isRecording = false;

@@ -33,10 +33,10 @@ namespace WebSocketTest.Services
             {
                 var p = Process.GetProcessById(pid);
                 p.Kill();
-                return JsonResponse.Success($"Đã diệt Process ID {pid} ({p.ProcessName})");
+                return JsonResponse.Success($"Killed Process ID {pid} ({p.ProcessName})");
             }
-            catch (ArgumentException) { return JsonResponse.Error($"Không tồn tại Process ID {pid}"); }
-            catch (Exception ex) { return JsonResponse.Error("Không thể diệt: " + ex.Message); }
+            catch (ArgumentException) { return JsonResponse.Error($"No existed Process ID {pid}"); }
+            catch (Exception ex) { return JsonResponse.Error("Can't kill: " + ex.Message); }
         }
     }
 }

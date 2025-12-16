@@ -37,19 +37,19 @@ namespace WebSocketTest.Services
 
         public string StopAppByName(string name)
         {
-            if (string.IsNullOrEmpty(name)) return JsonResponse.Error("Thiếu tên App");
+            if (string.IsNullOrEmpty(name)) return JsonResponse.Error("Missing app's name");
             var procs = Process.GetProcessesByName(name);
-            if (procs.Length == 0) return JsonResponse.Error("Không tìm thấy App: " + name);
+            if (procs.Length == 0) return JsonResponse.Error("Can't find app: " + name);
 
             foreach (var p in procs) { try { p.Kill(); } catch { } }
-            return JsonResponse.Success($"Đã đóng {procs.Length} cửa sổ '{name}'");
+            return JsonResponse.Success($"Closed {procs.Length} with '{name}'");
         }
 
         public string StartApp(string path)
         {
-            if (string.IsNullOrEmpty(path)) return JsonResponse.Error("Thiếu tên/đường dẫn");
+            if (string.IsNullOrEmpty(path)) return JsonResponse.Error("Missing path");
             Process.Start(path);
-            return JsonResponse.Success("Đã khởi động: " + path);
+            return JsonResponse.Success("Started: " + path);
         }
     }
 }

@@ -15,7 +15,7 @@ namespace WebSocketTest.Services
 
             if (base64Image.StartsWith("ERROR"))
             {
-                return JsonResponse.Error("Lỗi chụp màn hình: " + base64Image);
+                return JsonResponse.Error("Screenshot error: " + base64Image);
             }
 
             return "{\"type\": \"screen_capture\", \"data\": \"" + base64Image + "\"}";

