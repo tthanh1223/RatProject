@@ -48,30 +48,10 @@ namespace WebSocketTest
             _router = new Core.Router(appService, processService, fileService, screenService, webcamService, SendToClient);
         }
 
-        // Trong hàm Start(), xử lý HTTP request song song với WebSocket
         public async void Start(string url)
         {
-            // Delegate lifecycle to Core.Server while keeping backwards-compatible wrapper
             _server = new Core.Server(_logger);
             _ = _server.Start(url, ProcessClient);
-        }
-        // NOTE: health check handled by Core.Server; leave HandleHealthCheck in place for parity
-        private async Task HandleHealthCheck(HttpListenerContext context)
-        {
-            var response = new 
-            { 
-                status = "ok", 
-                server = "RAT_SERVER_V1.0",
-                version = "1.0"
-            };
-            
-            byte[] buffer = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response));
-            context.Response.ContentType = "application/json";
-            context.Response.ContentLength64 = buffer.Length;
-            context.Response.StatusCode = 200;
-            
-            await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-            context.Response.Close();
         }
 
         public void Stop() => _server?.Stop();
@@ -81,7 +61,6 @@ namespace WebSocketTest
             var wsContext = await context.AcceptWebSocketAsync(null);
             _client = new Core.Connection(wsContext.WebSocket);
             _logger("Client đã kết nối!");
-            // ✅ GỬI HANDSHAKE NGAY KHI KẾT NỐI
             var handshake = new 
             { 
                 type = "handshake", 
@@ -91,7 +70,7 @@ namespace WebSocketTest
             };
             await _client.SendAsync(JsonSerializer.Serialize(handshake));
 
-            byte[] buffer = new byte[10 * 1024 * 1024]; // 10MB buffer cho dữ liệu lớn
+            byte[] buffer = new byte[10 * 1024 * 1024];
 
             try
             {
@@ -110,7 +89,6 @@ namespace WebSocketTest
             catch (Exception ex) { _logger("Lỗi kết nối: " + ex.Message); }
             finally 
             { 
-                // Dọn dẹp
                 _client?.Dispose();
                 _client = null;
             }
@@ -118,7 +96,6 @@ namespace WebSocketTest
 
         public async Task SendToClient(string msg)
         {
-            // ✅ THAY ĐỔI: Chỉ cần gọi _client làm việc
             if (_client != null)
             {
                 await _client.SendAsync(msg);
