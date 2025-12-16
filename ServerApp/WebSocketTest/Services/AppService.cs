@@ -8,13 +8,8 @@ using WebSocketTest.Models;
 
 namespace WebSocketTest.Services
 {
-    public class AppService : IService
+    public class AppService 
     {
-        public string Handle(string command, string arg)
-        {
-            return JsonResponse.Info("AppService not implemented yet");
-        }
-
         public string GetApplicationList()
         {
             var processes = Process.GetProcesses();

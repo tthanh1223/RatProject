@@ -6,13 +6,8 @@ using WebSocketTest.Models;
 
 namespace WebSocketTest.Services
 {
-    public class ProcessService : IService
+    public class ProcessService 
     {
-        public string Handle(string command, string arg)
-        {
-            return JsonResponse.Info("ProcessService not implemented yet");
-        }
-
         public string GetFullProcessList()
         {
             var processes = Process.GetProcesses();
