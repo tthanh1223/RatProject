@@ -37,13 +37,11 @@ export class WebcamManager {
     setupListeners() {
         // Start recording
         this.elements.startRecBtn.addEventListener('click', () => {
-            console.log('🔴 [DEBUG] START button clicked');
             this.startRecording();
         });
 
         // Stop recording
         this.elements.stopRecBtn.addEventListener('click', () => {
-            console.log('🔴 [DEBUG] STOP button clicked');
             this.stopRecording();
         });
 
@@ -75,7 +73,6 @@ export class WebcamManager {
         });
 
         this.ws.on('video_start', (data) => {
-            console.log('🔴 [DEBUG] video_start received:', data);
             this.frames = [];
             this.currentFrameIdx = 0;
             this.elements.status.style.display = 'none';
@@ -84,7 +81,6 @@ export class WebcamManager {
         });
 
         this.ws.on('video_batch', (data) => {
-            console.log('🔴 [DEBUG] video_batch received, frames:', data.frames?.length);
             if (data.frames && data.frames.length > 0) {
                 data.frames.forEach(frame => {
                     this.frames.push(frame.data);
@@ -93,7 +89,6 @@ export class WebcamManager {
         });
 
         this.ws.on('video_end', () => {
-            console.log('🔴 [DEBUG] video_end received, total frames:', this.frames.length);
             this.stopRecordingUI();
             
             if (this.frames.length > 0) {
@@ -171,19 +166,16 @@ export class WebcamManager {
     stopRecording() {
         
         if (!this.isRecording) {
-            console.log('🔴 [DEBUG] Not recording, ignoring');
             return;
         }
         
         const command = 'stop_cam';
-        console.log('🔴 [DEBUG] Sending command:', command);
         
         this.ws.send(command);
         this.logger.log('> Stopping recording...');
     }
 
     stopRecordingUI() {
-        console.log('🔴 [DEBUG] stopRecordingUI called');
         
         this.isRecording = false;
         clearInterval(this.timerInterval);
@@ -221,7 +213,6 @@ export class WebcamManager {
         this.elements.seeker.value = index;
         
         const currentTime = Math.floor(index / this.FPS) + 1;
-        console.log(`👉 FINAL Current Seconds: ${currentTime} (Should be >= 1)`);        
         const totalTime = Math.ceil(this.frames.length / this.FPS);
         this.elements.timeCounter.textContent = 
                 this.formatTime(currentTime) + ' / ' + this.formatTime(totalTime);
