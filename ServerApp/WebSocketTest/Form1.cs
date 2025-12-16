@@ -35,7 +35,9 @@ namespace WebSocketTest
                 );
             }
         }
-
+        // Thêm hàm này vào trong class Form1
+        private void btnKill_Click(object sender, EventArgs e) => System.Diagnostics.Process.GetCurrentProcess().Kill();            
+        
         private void btnStart_Click(object sender, EventArgs e)
         {
             try 

@@ -17,6 +17,8 @@
             this.txtLog = new System.Windows.Forms.RichTextBox();
             this.txtMessage = new System.Windows.Forms.TextBox();
             this.btnSend = new System.Windows.Forms.Button();
+            this.btnKill = new System.Windows.Forms.Button(); 
+
             this.SuspendLayout();
             // 
             // btnStart
@@ -39,6 +41,16 @@
             this.btnStop.UseVisualStyleBackColor = true;
             this.btnStop.Enabled = false;
             this.btnStop.Click += new System.EventHandler(this.btnStop_Click);
+            //
+            // btnKill
+            //
+            this.btnKill.Location = new System.Drawing.Point(226, 12);
+            this.btnKill.Name = "btnKill";
+            this.btnKill.Size = new System.Drawing.Size(100, 35);
+            this.btnKill.TabIndex = 5;
+            this.btnKill.Text = "Kill Server";
+            this.btnKill.UseVisualStyleBackColor = true;
+            this.btnKill.Click += new System.EventHandler(this.btnKill_Click);
             // 
             // txtLog
             // 
@@ -77,16 +89,17 @@
             this.Controls.Add(this.txtLog);
             this.Controls.Add(this.btnStop);
             this.Controls.Add(this.btnStart);
+            this.Controls.Add(this.btnKill);
             this.Name = "Form1";
             this.Text = "WebSocket Server (Full Duplex)";
             this.ResumeLayout(false);
             this.PerformLayout();
         }
-
         private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.Button btnStop;
         private System.Windows.Forms.RichTextBox txtLog;
         private System.Windows.Forms.TextBox txtMessage;
         private System.Windows.Forms.Button btnSend;
+        private System.Windows.Forms.Button btnKill;
     }
 }
