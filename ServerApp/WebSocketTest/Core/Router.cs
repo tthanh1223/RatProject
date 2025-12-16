@@ -104,16 +104,11 @@ namespace WebSocketTest.Core
                         return JsonResponse.Success("Lệnh khởi động lại đã được gửi.");
 
                     // ===== WEBCAM (NEW IMPLEMENTATION) =====
-                    case "start_cam":
-                        Console.WriteLine("🔴 [ROUTER] Matched start_cam!"); // ← THÊM DÒNG NÀY
-                        
+                    case "start_cam":                        
                         if (!int.TryParse(arg, out int duration) || duration < 5 || duration > 300)
                         {
                             return JsonResponse.Error("Duration phải từ 5-300 giây");
-                        }
-                        
-                        Console.WriteLine($"🔴 [ROUTER] Calling WebcamService with duration: {duration}"); // ← THÊM
-                        
+                        }                        
                         _ = Task.Run(async () =>
                         {
                             try
@@ -123,14 +118,12 @@ namespace WebSocketTest.Core
                             }
                             catch (Exception ex)
                             {
-                                Console.WriteLine($"🔴 [ROUTER] ERROR: {ex.Message}");
                                 await _sendAsync(JsonResponse.Error("Lỗi camera: " + ex.Message));
                             }
                         });
                         return JsonResponse.Info("Starting camera...");
 
                     case "stop_cam":
-                        Console.WriteLine("🔴 [ROUTER] Matched stop_cam!"); // ← THÊM DÒNG NÀY
                         _webcamService.StopRecording();
                         return JsonResponse.Info("Stopping recording...");
 
