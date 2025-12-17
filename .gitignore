@@ -9,9 +9,6 @@ $RECYCLE.BIN/
 # ==========================
 # Visual Studio / C# 
 # ==========================
-# Build folders
-bin/
-obj/
 
 # User-specific files
 *.csproj.user
@@ -41,14 +38,6 @@ env/
 *.tmp
 *.temp
 
-# ==========================
-# Executables / binaries
-# ==========================
-*.exe
-*.dll
-*.lib
-*.so
-*.dylib
 
 # ==========================
 # Others

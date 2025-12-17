@@ -1,0 +1,79 @@
+{
+  "version": 2,
+  "dgSpecHash": "6HcYdZYdBIk=",
+  "success": true,
+  "projectFilePath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Admin\\.nuget\\packages\\accord\\3.8.0\\accord.3.8.0.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\accord.video\\3.8.0\\accord.video.3.8.0.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\accord.video.ffmpeg\\3.8.0\\accord.video.ffmpeg.3.8.0.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\aforge\\2.2.5\\aforge.2.2.5.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\aforge.video\\2.2.5\\aforge.video.2.2.5.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\aforge.video.directshow\\2.2.5\\aforge.video.directshow.2.2.5.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\opencvsharp4\\4.11.0.20250507\\opencvsharp4.4.11.0.20250507.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\opencvsharp4.runtime.win\\4.11.0.20250507\\opencvsharp4.runtime.win.4.11.0.20250507.nupkg.sha512",
+    "C:\\Users\\Admin\\.nuget\\packages\\sharpavi\\2.0.1\\sharpavi.2.0.1.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1603",
+      "level": "Warning",
+      "message": "WebSocketTest depends on SharpAvi (>= 2.0.0) but SharpAvi 2.0.0 was not found. SharpAvi 2.0.1 was resolved instead.",
+      "projectPath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "libraryId": "SharpAvi",
+      "targetGraphs": [
+        "net10.0-windows7.0"
+      ]
+    },
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "message": "Package 'AForge 2.2.5' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net10.0-windows7.0'. This package may not be fully compatible with your project.",
+      "projectPath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "libraryId": "AForge",
+      "targetGraphs": [
+        "net10.0-windows7.0"
+      ]
+    },
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "message": "Package 'AForge.Video 2.2.5' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net10.0-windows7.0'. This package may not be fully compatible with your project.",
+      "projectPath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "libraryId": "AForge.Video",
+      "targetGraphs": [
+        "net10.0-windows7.0"
+      ]
+    },
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "message": "Package 'AForge.Video.DirectShow 2.2.5' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net10.0-windows7.0'. This package may not be fully compatible with your project.",
+      "projectPath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "libraryId": "AForge.Video.DirectShow",
+      "targetGraphs": [
+        "net10.0-windows7.0"
+      ]
+    },
+    {
+      "code": "NU1701",
+      "level": "Warning",
+      "message": "Package 'SharpAvi 2.0.1' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net10.0-windows7.0'. This package may not be fully compatible with your project.",
+      "projectPath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\PycharmProjects\\RatProject\\ServerApp\\WebSocketTest\\WebSocketTest.csproj",
+      "libraryId": "SharpAvi",
+      "targetGraphs": [
+        "net10.0-windows7.0"
+      ]
+    }
+  ]
+}
