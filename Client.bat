@@ -3,7 +3,7 @@ title Client App Launcher
 cls
 
 echo ======================================================
-echo    KHOI CHAY CLIENT APP (CAU TRUC: ROOT -> SOURCE)
+echo    KHOI CHAY CLIENT APP (CAU TRUC: ROOT - SOURCE)
 echo ======================================================
 
 :: 1. Đảm bảo CMD luôn đứng ở thư mục gốc (RATPROJECT) chứa file .bat này
