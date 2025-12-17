@@ -9,7 +9,7 @@ namespace WebSocketTest
 {
     public partial class Form1 : Form
     {
-        // ✅ KHAI BÁO PORT Ở ĐÂY (Chỉ cần sửa số này là ăn toàn bộ code)
+        // ✅ KHAI BÁO PORT (Sửa ở đây là ăn toàn bộ code)
         private const int PORT = 8080;
         
         private SimpleWebSocketServer? _server;
@@ -24,83 +24,47 @@ namespace WebSocketTest
             {
                 MessageBox.Show(
                     "⚠️ CẢNH BÁO: Ứng dụng KHÔNG chạy với quyền Administrator!\n\n" +
-                    "Điều này có thể gây lỗi khi bind vào tất cả network interfaces.\n\n" +
-                    "Khuyến nghị:\n" +
-                    "- Đóng app này\n" +
-                    "- Click phải vào Visual Studio → Run as Administrator\n" +
-                    "- Mở lại project và chạy",
+                    "Vui lòng chạy lại với quyền 'Run as Administrator' để ứng dụng hoạt động ổn định.",
                     "Admin Check",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning
                 );
             }
         }
-        // Thêm hàm này vào trong class Form1
-        private void btnKill_Click(object sender, EventArgs e) => System.Diagnostics.Process.GetCurrentProcess().Kill();            
-        
+
+        // Nút Kill Server
+        private void btnKill_Click(object sender, EventArgs e) => System.Diagnostics.Process.GetCurrentProcess().Kill();
+
         private void btnStart_Click(object sender, EventArgs e)
         {
             try 
             {
-                // ✅ KIỂM TRA URL RESERVATION
+                // 1. KIỂM TRA URL RESERVATION
                 if (!CheckUrlReservation())
                 {
                     var result = MessageBox.Show(
                         $"❌ PHÁT HIỆN: Windows chưa cho phép bind vào http://+:{PORT}/\n\n" +
-                        "Bạn cần chạy lệnh sau trong CMD (Administrator):\n\n" +
-                        $"netsh http add urlacl url=http://+:{PORT}/ user=Everyone\n\n" +
-                        "Bấm YES để tự động chạy lệnh này (cần quyền Admin)\n" +
-                        "Bấm NO để copy lệnh và tự chạy thủ công",
+                        "Bạn có muốn tự động thêm quyền này không?",
                         "URL Reservation Required",
-                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxButtons.YesNo,
                         MessageBoxIcon.Warning
                     );
 
                     if (result == DialogResult.Yes)
                     {
                         if (AddUrlReservation())
-                        {
-                            MessageBox.Show(
-                                "✅ Đã thêm URL reservation thành công!\n\nBạn có thể Start Server ngay bây giờ.",
-                                "Success",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Information
-                            );
-                        }
+                            MessageBox.Show("✅ Đã thêm URL reservation thành công!", "Success");
                         else
                         {
-                            MessageBox.Show(
-                                "❌ Không thể thêm URL reservation tự động.\n\n" +
-                                "Vui lòng chạy lệnh sau trong CMD (Administrator):\n\n" +
-                                $"netsh http add urlacl url=http://+:{PORT}/ user=Everyone",
-                                "Failed",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error
-                            );
+                            MessageBox.Show("❌ Thất bại. Vui lòng chạy thủ công.", "Error");
                             return;
                         }
                     }
-                    else if (result == DialogResult.No)
-                    {
-                        Clipboard.SetText($"netsh http add urlacl url=http://+:{PORT}/ user=Everyone");
-                        MessageBox.Show(
-                            "✅ Đã copy lệnh vào clipboard!\n\n" +
-                            "Mở CMD với quyền Administrator và paste lệnh vào.",
-                            "Copied",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information
-                        );
-                        return;
-                    }
-                    else
-                    {
-                        return; // User cancelled
-                    }
+                    else return;
                 }
 
+                // 2. KHỞI ĐỘNG SERVER
                 _server = new SimpleWebSocketServer(LogToUI);
-                
-                // ✅ SỬA: Dùng biến PORT
                 _server.Start($"http://+:{PORT}/");
                 
                 _serverRunning = true;
@@ -108,7 +72,7 @@ namespace WebSocketTest
                 btnStart.Text = "Running...";
                 btnStop.Enabled = true;
                 
-                // ✅ Hiển thị IP với đúng PORT
+                // 3. HIỂN THỊ THÔNG TIN
                 string localIP = GetLocalIPAddress();
                 LogToUI("═══════════════════════════════════════════════");
                 LogToUI($"✅ Server đã khởi động thành công!");
@@ -117,39 +81,16 @@ namespace WebSocketTest
                 LogToUI($"🌐 Server đang lắng nghe trên TẤT CẢ network interfaces");
                 LogToUI("═══════════════════════════════════════════════");
                 
-                // ✅ KIỂM TRA FIREWALL
-                CheckFirewallStatus();
+                // 4. KIỂM TRA & TỰ ĐỘNG ADD FIREWALL
+                CheckAndFixFirewall();
             }
             catch (HttpListenerException ex) when (ex.ErrorCode == 5)
             {
-                MessageBox.Show(
-                    "❌ LỖI: Access Denied!\n\n" +
-                    "Có 2 nguyên nhân:\n\n" +
-                    "1. Bạn CHƯA chạy Visual Studio với quyền ADMINISTRATOR\n" +
-                    "   → Đóng Visual Studio\n" +
-                    "   → Click phải → Run as Administrator\n" +
-                    "   → Mở lại project\n\n" +
-                    $"2. Windows CHƯA cho phép bind vào http://+:{PORT}/\n" +
-                    "   → Chạy lệnh sau trong CMD (Administrator):\n" +
-                    $"   netsh http add urlacl url=http://+:{PORT}/ user=Everyone",
-                    "Lỗi quyền truy cập",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
+                MessageBox.Show("❌ LỖI: Access Denied (Mã 5). Hãy chạy Admin!", "Lỗi quyền", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"❌ Lỗi khởi động server:\n\n{ex.Message}\n\n" +
-                    "Kiểm tra:\n" +
-                    "- Chạy Visual Studio với quyền Administrator\n" +
-                    $"- Port {PORT} có bị chiếm không?\n" +
-                    "- Đã chạy lệnh netsh http add urlacl chưa?\n" +
-                    "- Firewall có chặn không?",
-                    "Lỗi",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error
-                );
+                MessageBox.Show($"❌ Lỗi khởi động: {ex.Message}", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -167,16 +108,12 @@ namespace WebSocketTest
                     LogToUI("Server đã dừng!");
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Lỗi dừng server: " + ex.Message);
-            }
+            catch (Exception ex) { MessageBox.Show("Lỗi dừng server: " + ex.Message); }
         }
 
         private async void btnSend_Click(object sender, EventArgs e)
         {
             if (_server == null) return;
-
             string msg = txtMessage.Text.Trim();
             if (!string.IsNullOrEmpty(msg))
             {
@@ -206,7 +143,8 @@ namespace WebSocketTest
             txtLog.ScrollToCaret();
         }
 
-        // ✅ HÀM LẤY IP CỦA MÁY
+        // --- CÁC HÀM HỖ TRỢ HỆ THỐNG ---
+
         private string GetLocalIPAddress()
         {
             try
@@ -215,18 +153,12 @@ namespace WebSocketTest
                 {
                     socket.Connect("8.8.8.8", 65530);
                     IPEndPoint? endPoint = socket.LocalEndPoint as IPEndPoint;
-                    if (endPoint != null)
-                    {
-                        return endPoint.Address.ToString();
-                    }
+                    return endPoint?.Address.ToString() ?? "127.0.0.1";
                 }
             }
-            catch { }
-            
-            return "127.0.0.1";
+            catch { return "127.0.0.1"; }
         }
 
-        // ✅ KIỂM TRA QUYỀN ADMIN
         private bool IsRunAsAdministrator()
         {
             try
@@ -235,13 +167,11 @@ namespace WebSocketTest
                 WindowsPrincipal principal = new WindowsPrincipal(identity);
                 return principal.IsInRole(WindowsBuiltInRole.Administrator);
             }
-            catch
-            {
-                return false;
-            }
+            catch { return false; }
         }
 
-        // ✅ KIỂM TRA URL RESERVATION
+        // --- URL RESERVATION LOGIC ---
+
         private bool CheckUrlReservation()
         {
             try
@@ -254,57 +184,31 @@ namespace WebSocketTest
                     RedirectStandardOutput = true,
                     CreateNoWindow = true
                 };
-
                 using (Process process = Process.Start(psi)!)
                 {
                     string output = process.StandardOutput.ReadToEnd();
                     process.WaitForExit();
-                    
-                    // Kiểm tra xem có URL reservation cho port hiện tại không
-                    return output.Contains($"http://+:{PORT}/") || 
-                           output.Contains($"http://*:{PORT}/");
+                    return output.Contains($"http://+:{PORT}/") || output.Contains($"http://*:{PORT}/");
                 }
             }
-            catch
-            {
-                return false;
-            }
+            catch { return false; }
         }
 
-        // ✅ TỰ ĐỘNG THÊM URL RESERVATION
         private bool AddUrlReservation()
         {
-            try
-            {
-                ProcessStartInfo psi = new ProcessStartInfo
-                {
-                    FileName = "netsh",
-                    Arguments = $"http add urlacl url=http://+:{PORT}/ user=Everyone",
-                    UseShellExecute = true,
-                    Verb = "runas", // Request admin
-                    CreateNoWindow = true
-                };
-
-                using (Process process = Process.Start(psi)!)
-                {
-                    process.WaitForExit();
-                    return process.ExitCode == 0;
-                }
-            }
-            catch
-            {
-                return false;
-            }
+            return RunNetshCommand($"http add urlacl url=http://+:{PORT}/ user=Everyone");
         }
 
-        // ✅ KIỂM TRA FIREWALL
-        private void CheckFirewallStatus()
+        // --- FIREWALL LOGIC (Đã hoàn thiện) ---
+
+        // Hàm kiểm tra và sửa lỗi Firewall tự động
+        private void CheckAndFixFirewall()
         {
             try
             {
-                // Tên rule cũng nên có số port để dễ quản lý
                 string ruleName = $"RAT Server Port {PORT}";
                 
+                // Kiểm tra rule có tồn tại không
                 ProcessStartInfo psi = new ProcessStartInfo
                 {
                     FileName = "netsh",
@@ -321,19 +225,82 @@ namespace WebSocketTest
                     
                     if (!output.Contains("Rule Name"))
                     {
+                        // 1. Ghi log cảnh báo như yêu cầu
                         LogToUI($"⚠️ CẢNH BÁO: Chưa tìm thấy Firewall rule tên \"{ruleName}\"!");
-                        LogToUI("💡 Nếu bạn chưa mở port thủ công, hãy chạy lệnh sau:");
-                        LogToUI($"   netsh advfirewall firewall add rule name=\"{ruleName}\" dir=in action=allow protocol=TCP localport={PORT}");
+                        LogToUI($"💡 Đang đề xuất tự động mở port {PORT}...");
+
+                        // 2. Hỏi người dùng
+                        var result = MessageBox.Show(
+                            $"Firewall chưa cho phép port {PORT}.\nBạn có muốn tự động thêm Rule không?",
+                            "Firewall Check",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question
+                        );
+
+                        if (result == DialogResult.Yes)
+                        {
+                            // 3. Gọi hàm AddFirewallRule
+                            if (AddFirewallRule())
+                            {
+                                LogToUI($"✅ Đã thêm Firewall rule \"{ruleName}\" thành công!");
+                                MessageBox.Show("✅ Đã mở port thành công!", "Success");
+                            }
+                            else
+                            {
+                                LogToUI("❌ Lỗi khi thêm Firewall rule.");
+                                MessageBox.Show("❌ Không thể thêm Firewall rule.", "Error");
+                            }
+                        }
+                        else
+                        {
+                            LogToUI("💡 Bạn đã chọn KHÔNG mở port. Kết nối từ máy khác có thể bị chặn.");
+                        }
                     }
                     else
                     {
-                        LogToUI($"✅ Đã tìm thấy Firewall rule \"{ruleName}\"");
+                        LogToUI($"✅ Firewall rule \"{ruleName}\" đang hoạt động tốt.");
                     }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogToUI($"⚠️ Lỗi kiểm tra Firewall: {ex.Message}");
+            }
+        }
+
+        // Hàm Add Firewall Rule hoàn chỉnh
+        private bool AddFirewallRule()
+        {
+            string ruleName = $"RAT Server Port {PORT}";
+            // Lệnh netsh chuẩn để mở port
+            string command = $"advfirewall firewall add rule name=\"{ruleName}\" dir=in action=allow protocol=TCP localport={PORT}";
+            
+            return RunNetshCommand(command);
+        }
+
+        // Hàm chạy lệnh Netsh chung (để tái sử dụng code)
+        private bool RunNetshCommand(string arguments)
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = "netsh",
+                    Arguments = arguments,
+                    UseShellExecute = true, // Cần true để dùng runas
+                    Verb = "runas",         // Yêu cầu quyền Admin
+                    CreateNoWindow = true
+                };
+
+                using (Process process = Process.Start(psi)!)
+                {
+                    process.WaitForExit();
+                    return process.ExitCode == 0;
                 }
             }
             catch
             {
-                LogToUI("⚠️ Không thể kiểm tra Firewall status");
+                return false;
             }
         }
     }
