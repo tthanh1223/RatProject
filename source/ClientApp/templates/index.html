@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <!-- CSS Styles -->
+     <link rel = "stylesheet" href="/static/css/style.css">    
+</head>
+<body>
+    <!-- Image Modal -->
+    <div id="imgModal" class="modal">
+        <span class="close-modal" id="closeModalBtn">&times;</span>
+        <img class="modal-content" id="img01">
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div>📡 REMOTE_CONTROLLER_V1.0</div>
+        <div style="font-size: 20px; display: flex; align-items: center;">
+            <span id="status-dot" class="status-dot"></span>
+            <span id="status-text">DISCONNECTED</span>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-container">
+        <div class="tab active" data-tab="apps">🖥️ APPS</div>
+        <div class="tab" data-tab="processes">⚙️ PROCS</div>
+        <div class="tab" data-tab="screen">📸 SCRN</div>
+        <div class="tab" data-tab="keylog">⌨️ KEYS</div>
+        <div class="tab" data-tab="shutdown">🔌 POWER</div>
+        <div class="tab" data-tab="webcam">📹 CAM</div>
+        <div class="tab" data-tab="files">📁 FILES</div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="content">
+        <!-- Left Panel: Views -->
+        <div class="view-panel pixel-box">
+            
+            <!-- Toolbar: Apps -->
+            <div id="toolbar-apps" class="toolbar">
+                <button class="btn-refresh" id="btn-refresh-apps">🔄 Refresh</button>
+                <div class="spacer"></div>
+                <input type="text" id="appInput" placeholder="Ex: notepad...">
+                <button class="btn-exec" id="btn-start-app">▶ Start App</button>
+            </div>
+
+            <!-- Toolbar: Processes -->
+            <div id="toolbar-processes" class="toolbar hidden">
+                <button class="btn-refresh" id="btn-refresh-processes">🔄 Refresh</button>
+                <div class="spacer"></div>
+                <input type="text" id="procInput" placeholder="Ex: cmd.exe...">
+                <button class="btn-exec" id="btn-start-process">▶ Run Task</button>
+            </div>
+
+            <!-- Toolbar: Screen -->
+            <div id="toolbar-screen" class="toolbar hidden">
+                <button class="btn-refresh" id="btn-capture-screen">📸 Capture</button>
+                <button class="btn-exec" id="btn-save-screenshot">💾 Save PNG</button>
+                <div class="spacer"></div>
+                <span style="color:#555; font-size:16px; font-weight:bold;">[FMT: JPEG]</span>
+            </div>
+
+            <!-- Toolbar: Keylogger -->
+            <div id="toolbar-keylog" class="toolbar hidden">
+                <button type="button" class="btn-exec" id="btn-keylog-start">▶ REC</button>
+                <button type="button" class="btn-kill" id="btn-keylog-stop">⏹ STOP</button>
+                <div class="spacer"></div>
+                <button type="button" class="btn-exec" id="btn-keylog-save">💾 SAVE</button>
+            </div>
+
+            <!-- Toolbar: Webcam -->
+            <div id="toolbar-webcam" class="toolbar hidden">
+                <!-- Recording Controls -->
+                <button class="btn-refresh" id="btn-start-record">📹 REC</button>
+                <button class="btn-kill hidden" id="btn-stop-record">⏹ STOP</button>
+                
+                <!-- Duration Input -->
+                <label style="margin-left: 20px; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 16px;">Duration:</span>
+                    <input type="number" id="duration-input" value="20" min="5" max="300" 
+                        style="width: 80px; flex: none; text-align: center;">
+                    <span style="font-size: 16px;">giây</span>
+                </label>
+                
+                <!-- Recording Status -->
+                <div id="rec-status" class="hidden" style="margin-left: 20px; display: flex; align-items: center; gap: 10px;">
+                    <span style="color: #ff2a6d; font-weight: bold; animation: blink 1s infinite;">● REC</span>
+                    <span id="rec-timer" style="font-family: monospace; font-size: 20px; color: #ff2a6d;">00:00 / 00:20</span>
+                </div>
+                
+                <div class="spacer"></div>
+                
+                <!-- Save Button -->
+                <button id="btn-save-video" class="btn-exec">💾 SAVE VID</button>
+            </div>
+
+            <!-- CSS Animation for blinking REC indicator -->
+            <style>
+            @keyframes blink {
+                0%, 49% { opacity: 1; }
+                50%, 100% { opacity: 0; }
+            }
+            </style>
+
+            <!-- Toolbar: File Manager -->
+            <div id="toolbar-files" class="toolbar hidden">
+                <input type="text" id="pathInput" placeholder="Path (ex: C:\)" value="C:\">
+                <button class="btn-exec" id="btn-open-path">📂 OPEN</button>
+                <button class="btn-refresh" id="btn-refresh-files">🔄 Refresh</button>
+                <div class="spacer"></div>
+                <span id="current-path-display" style="color:#555; font-size:14px;">C:\</span>
+            </div>
+
+            <!-- View: Keylogger -->
+            <div id="view-keylog" class="hidden scroll-area" style="padding: 0; background: #000;">
+                <textarea id="txtKeylogs" 
+                    style="width: 100%; height: 100%; background: #000; color: #0f0; 
+                    font-family: 'Courier New', monospace; border: none; padding: 15px; 
+                    resize: none; box-sizing: border-box; outline: none;" 
+                    readonly 
+                    placeholder="> WAITING FOR DATA..."></textarea>
+            </div>
+
+            <!-- View: Screen Capture -->
+            <div id="view-screen" class="hidden scroll-area" style="text-align: center; padding: 20px; background: #333; height: 100%;">
+                <div id="loading-screen" style="color: #0f0; display: none; margin-bottom: 10px;">⏳ RECEIVING DATA...</div>
+                <img id="screen-img" style="cursor: pointer;" />
+            </div>
+
+            <!-- View: Webcam -->
+            <div id="view-webcam" class="hidden scroll-area" style="height: 100%;">
+                <div id="cam-status" style="color: #888; margin-top: 50px; text-align: center; font-size: 24px;">
+                    PRESS [REC 5s] TO START
+                </div>
+                <div id="loading-cam" style="color: #ffcc00; display: none; text-align: center; margin-top: 20px; font-size: 20px;">
+                    ⏳ RECORDING & COMPRESSING...
+                </div>
+
+                <div id="video-player-container" class="hidden">
+                    <div style="position: relative; background: black; line-height: 0; display: flex; align-items: center; justify-content: center; border: 2px solid #555;">
+                        <img id="video-screen" style="width:100%; height:auto; box-shadow:none; border:none;" />
+                        <div id="replay-overlay" style="position: absolute; top:0; left:0; width:100%; height:100%; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); cursor: pointer;">
+                            <span style="color: #0f0; font-size: 80px; text-shadow: 4px 4px 0 #000;">▶</span>
+                        </div>
+                    </div>
+
+                    <!-- Video Controls - TRONG #video-player-container -->
+                    <div class="video-controls">
+                        <button id="btn-play-video" class="btn-exec" style="width: 40px; height: 30px; font-size: 16px;">▶</button>
+                        <button id="btn-pause-video" class="btn-kill" style="width: 40px; height: 30px; font-size: 16px;">II</button>
+                        <input type="range" id="video-seeker" min="0" max="100" value="0" style="flex: 1; margin: 0 10px;">
+                        <!-- ✅ THAY ĐỔI: Hiển thị time thay vì frame -->
+                        <span id="time-counter" style="color: white; font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold;">00:00 / 00:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: Tables (Apps & Processes) -->
+            <div id="view-tables" class="scroll-area">
+                <table id="table-apps">
+                    <thead>
+                        <tr>
+                            <th width="80">PID</th>
+                            <th>WINDOW TITLE</th>
+                            <th>FILE NAME</th>
+                            <th width="100">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-apps"></tbody>
+                </table>
+
+                <table id="table-processes" class="hidden">
+                    <thead>
+                        <tr>
+                            <th width="100">PID</th>
+                            <th>PROCESS NAME</th>
+                            <th>MEM (MB)</th>
+                            <th width="100">ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-processes"></tbody>
+                </table>
+            </div>
+
+            <!-- View: Power -->
+            <div id="view-shutdown" class="hidden" style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px;">
+    
+    <div style="text-align: center; margin-bottom: 40px;">
+        <span style="color: red; font-size: 40px; font-weight: bold; font-family: 'VT323', monospace;">⚠️ DANGER ZONE</span>
+    </div>
+
+    <div style="display: flex; flex-direction: row; justify-content: center; gap: 40px; width: 100%;">
+        
+        <button id="btn-shutdown" class="btn-kill" style="width: 280px; height: 160px; font-family: 'VT323', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; cursor: pointer; border-radius: 0px;">
+            
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+
+            <span style="font-size: 45px; line-height: 1;">SHUTDOWN</span>
+        </button>
+
+        <button id="btn-restart" class="btn-refresh" style="width: 280px; height: 160px; background: #fd7e14; color: white; font-family: 'VT323', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; cursor: pointer; border-radius: 0px;">
+            
+            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+
+            <span style="font-size: 45px; line-height: 1;">RESTART</span>
+        </button>
+
+    </div>
+</div>
+            
+            <!-- View: File Manager -->
+            <div id="view-files" class="hidden scroll-area">
+                <div id="file-list-container" style="padding: 15px;">
+                    <!-- File list will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: System Log -->
+        <div class="log-panel pixel-box">
+            <div class="log-header">SYSTEM LOG</div>
+            <div id="chat-content"></div>
+            <div class="log-input">
+                <input type="text" id="chatInput" placeholder="CMD/Chat...">
+                <button id="btn-send-chat" class="btn-neutral">SEND</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Modules -->
+    <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>
