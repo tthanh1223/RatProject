@@ -4,16 +4,23 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-
+import os
 app = FastAPI()
 
-# Mount static files
-try:
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-except RuntimeError:
-    print("⚠️ Cảnh báo: Chưa tạo thư mục 'static'")
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
-templates = Jinja2Templates(directory="templates")
+# Tạo đường dẫn đầy đủ tới static và templates
+static_dir = os.path.join(base_dir, "static")
+templates_dir = os.path.join(base_dir, "templates")
+
+# Mount static files
+if os.path.isdir(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+else:
+    print(f"⚠️ Cảnh báo: Không tìm thấy thư mục '{static_dir}'")
+
+# Cấu hình Templates với đường dẫn tuyệt đối
+templates = Jinja2Templates(directory=templates_dir)
 
 def get_local_ip():
     """Lấy IP LAN của máy hiện tại"""
