@@ -1,17 +1,19 @@
+/* =========================================
+   1. KHAI BÁO FONT
+   ========================================= */
 @font-face {
     font-family: 'Header';
-    src: url('../fonts/SVN-New Athletic M54.ttf'); /* Đã bỏ dấu \ nhìn cho gọn */
+    src: url('../fonts/SVN-New Athletic M54.ttf');
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'Subhead';
-    src: url('../fonts/SVN-Agency\ FB.ttf');
+    src: url('../fonts/SVN-Agency FB.ttf'); /* Đã sửa lại đường dẫn chuẩn */
     font-weight: normal;
     font-style: normal;
 }
-
 
 :root {
     --bg-color: #5d5678;
@@ -28,55 +30,66 @@
     box-sizing: border-box; 
 }
 
+/* =========================================
+   2. VIDEO BACKGROUND (QUAN TRỌNG)
+   ========================================= */
 #bg-video {
-    position: fixed; 
-    top: 0;
-    left: 0;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+
+    transform: translate(-50%, -50%) scale(1.1); 
     
-    width: 100vw;
-    height: 100vh;
-    object-fit: cover; 
-    transform: scale(1.3) translateY(-10%);
-    z-index: -1; 
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: cover;
+    z-index: -2;
 }
 
-/* 2. Tạo lớp màn che màu tối (Overlay) */
 .video-overlay {
-    position: fixed;
+    position: fixed;  
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4); /* Màu đen, độ mờ 60% */
-    /* Mẹo: Nếu muốn style hacker xanh lá, thử đổi thành rgba(0, 50, 0, 0.7) */
-    z-index: -1; /* Nằm đè lên video (-2) nhưng nằm dưới nội dung web (0) */
+    background: rgba(0, 0, 0, 0.4); 
+    z-index: -1;      
 }
 
+/* =========================================
+   3. BODY & LAYOUT
+   ========================================= */
 body { 
-    font-family: 'Header', 'Subhead', monospace; 
-    background: var(--bg-color); 
+    font-family: 'Header', sans-serif; 
+    /* Màu nền dự phòng khi video chưa tải xong */
+    background-color: #0f0f15; 
     height: 100vh; 
     display: flex;
-    align-items: center;
-    justify-content: center;
-    background-image: radial-gradient(#6d6688 1px, transparent 1px);
-    background-size: 20px 20px;
+    align-items: center;     /* Căn giữa dọc */
+    justify-content: center; /* Căn giữa ngang */
     color: var(--text-main);
+    overflow: hidden; /* Không cho hiện thanh cuộn */
 }
 
-
-
-/* ===== PANEL / CONTAINER ===== */
+/* =========================================
+   4. PANEL / CONTAINER
+   ========================================= */
 .login-container {
     background: var(--panel-bg);
     border: 4px solid #000;
-    box-shadow: 12px 12px 0px #000;
+    box-shadow: 12px 12px 0px #000; /* Hiệu ứng đổ bóng cứng (Neo-Brutalism) */
     padding: 40px;
     max-width: 500px;
     width: 90%;
+    position: relative;
+    z-index: 1; /* Đảm bảo nổi lên trên video */
 }
 
-/* ===== HEADER ===== */
+/* =========================================
+   5. TEXT & HEADER
+   ========================================= */
 .logo {
     text-align: center;
     font-size: 40px;
@@ -84,18 +97,25 @@ body {
     margin-bottom: 10px;
     color: var(--primary);
     text-shadow: 3px 3px #121955;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
 }
 
 .subtitle {
-    font-family: 'Subhead', monospace;
+    font-family: 'Subhead', sans-serif;
     text-align: center;
-    font-size: 18px;
+    font-size: 22px; /* Tăng size chút cho dễ đọc */
     color: #666;
     margin-bottom: 30px;
     letter-spacing: 1px;
+    font-weight: bold;
 }
 
-/* ===== FORM ===== */
+/* =========================================
+   6. INPUT FIELDS
+   ========================================= */
 .form-group {
     margin-bottom: 20px;
 }
@@ -104,72 +124,57 @@ label {
     display: block;
     font-size: 20px;
     margin-bottom: 8px;
-    font-weight: bold;
-    text-transform: uppercase;
+    font-weight: normal; /* Font Header mặc định đã đậm rồi */
     letter-spacing: 1px;
 }
 
-/* ===== INPUT ===== */
+/* Gộp chung style cho input để tránh trùng lặp */
 input[type="text"] {
     width: 100%;            
     padding: 12px 15px;      
-    font-size: 18px;         
-    font-family: 'Subhead', monospace; 
+    font-size: 24px;         
+    font-family: 'Subhead', sans-serif; 
     border: 3px solid #000;       
-    background-color: #f0f0f0;    
+    background-color: #fff;    
     box-shadow: 5px 5px 0px #000; 
     outline: none;                
     transition: all 0.1s ease;    
-    box-sizing: border-box;       
 }
 
 input[type="text"]:focus {
-    background-color: #fff;       
+    background-color: #e8f0fe;       
     transform: translate(2px, 2px); 
     box-shadow: 3px 3px 0px #000;   
+    border-color: var(--primary);
 }
 
 input::placeholder {
-    color: #888;
+    color: #999;
     font-style: italic;
     opacity: 0.7;
+    font-size: 20px;
 }
 
-input:invalid {
-    font-family: 'Subhead', monospace;
-    border-color: #ff2a6d;        
-    background-color: #ffe6e6;
-}
-
-input {
-    width: 100%;
-    padding: 12px;
-    border: 3px solid #000;
-    font-family: 'VT323', monospace;
-    font-size: 24px;
-    background: #fff;
-    box-shadow: inset 3px 3px 0px #ccc;
-    outline: none;
-}
-
-input:focus {
-    background: #e8f0fe;
-    box-shadow: inset 3px 3px 0px var(--primary);
-}
-
-/* ===== BUTTON ===== */
+/* =========================================
+   7. BUTTONS
+   ========================================= */
 .btn {
     width: 100%;
     padding: 15px;
     border: 3px solid #000;
-    font-family: 'Header', 'Subhead', monospace;
-    font-size: 24px;
-    font-weight: bold;
+    font-family: 'Header', sans-serif;
+    font-size: 20px;
     cursor: pointer;
     text-transform: uppercase;
     box-shadow: 6px 6px 0px #000;
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);;
-    letter-spacing: 2px;
+    transition: all 0.2s ease;
+    letter-spacing: 1px;
+    margin-top: 10px;
+}
+
+.btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 8px 8px 0px #000;
 }
 
 .btn:active {
@@ -177,32 +182,23 @@ input:focus {
     box-shadow: 3px 3px 0px #000;
 }
 
-.btn:disabled {
-    background: #aaa !important;
-    color: #555;
-    cursor: not-allowed;
-}
-
 .btn-primary {
     background: var(--success);
     color: #000;
 }
 
-.btn-secondary {
-    background: #ddd;
-    color: #000;
-    margin-top: 10px;
-}
-
-/* ===== STATUS / ALERT ===== */
+/* =========================================
+   8. UTILITIES & ICONS
+   ========================================= */
 .status {
     margin-top: 20px;
     padding: 15px;
     border: 3px solid #000;
-    font-size: 18px;
+    font-family: 'Subhead', sans-serif;
+    font-size: 20px;
     text-align: center;
     display: none;
-    letter-spacing: 1px;
+    font-weight: bold;
 }
 
 .status.info    { background: #e3f2fd; color: var(--primary); }
@@ -210,59 +206,21 @@ input:focus {
 .status.error   { background: #ffe0e0; color: var(--danger); }
 
 .helper-text {
-    font-family: 'Subhead', monospace;
-    font-size: 16px;
-    color: #666;
+    font-family: 'Subhead', sans-serif;
+    font-size: 20px;
+    color: #555;
     margin-top: 8px;
     font-style: italic;
 }
-/* ===== ICON ===== */
 
 .icon-logo {
-    width: 100px;           
-    height: 100px;          
-    vertical-align: middle; 
-    margin-right: 15px;    
+    width: 80px;           
+    height: 80px;           
+    margin-bottom: 10px;    
     transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    filter: drop-shadow(3px 3px 0px #000);
-}
-
-/* ===== EXTRA ===== */
-.divider {
-    margin: 30px 0;
-    border-top: 3px dashed #000;
-}
-
-.discovered-servers {
-    display: none;
-    max-height: 200px;
-    overflow-y: auto;
-    border: 3px solid #000;
-    background: #fff;
-    margin-top: 10px;
-}
-
-.server-item {
-    padding: 10px;
-    border-bottom: 2px solid #ccc;
-    cursor: pointer;
-    font-size: 18px;
-    transition: background 0.1s;
-}
-
-.server-item:hover {
-    background: #fffaaa;
-}
-
-.server-item:last-child {
-    border-bottom: none;
+    filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.5));
 }
 
 .logo:hover .icon-logo {
-    transform: scale(1.1); 
+    transform: scale(1.1) rotate(5deg); 
 }
-
-.btn:hover {
-    transform: scale(1.04);
-}
-
