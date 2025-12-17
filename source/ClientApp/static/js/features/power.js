@@ -30,11 +30,7 @@ export class PowerManager {
     }
 
     sendCommand(action) {
-        this.ws.send(JSON.stringify({
-            type: 'power',
-            action: action
-        }));
-        
+        this.ws.send(action);
         this.logger.log(`🔌 Đã gửi lệnh: ${action.toUpperCase()}`);
     }
 }
