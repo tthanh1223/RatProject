@@ -8,9 +8,9 @@
 * **Trần Hoàng Minh Vĩ** - 24122026
 
 ### Đường dẫn liên quan:
-* [`Log chat AI`](https://google.com)
-* [`Báo cáo đồ án`](https://google.com)
-* [`Video demo sản phẩm`](https://google.com)
+* [`Log chat AI`](https://drive.google.com/drive/folders/1dJMueEo8WBIXAtEYNrycA2oWIgz-CKYM?usp=sharing)
+* [`Báo cáo đồ án`](https://drive.google.com/drive/folders/1dJMueEo8WBIXAtEYNrycA2oWIgz-CKYM?usp=sharing)
+* [`Video demo sản phẩm`](https://youtu.be/uKzLxnZVqY0)
 
 ### Các bước cài đặt:
 Đầu tiên, ta có thể tải trực tiếp hoặc clone chính repository này:
@@ -24,6 +24,6 @@ Khởi chạy tệp `Client.bat` để cho client và `Server.bat` cho server.
 * Đối với server, hộp thoại hiện ra, chỉ cần click `Start Server` để khởi động server.
 > **Lưu ý**: khi chạy server lần đầu, sẽ có hộp thoại hiện ra yêu cầu quyền `URL Reservation` và `Filewall Rule`, chỉ cần chọn `Yes` để cấp quyền cho hệ thống.
 
-Chi tiết hơn, mời thầy và các bạn tham khảo [báo cáo đồ án](https://google.com) 
+Chi tiết hơn, mời thầy và các bạn tham khảo [báo cáo đồ án](https://drive.google.com/drive/folders/1dJMueEo8WBIXAtEYNrycA2oWIgz-CKYM?usp=sharing) 
 
 Ngày 22 tháng 12 năm 2025.
