@@ -1,47 +1,29 @@
-Hướng dẫn chạy app:
-- Đầu tiên cài .NET về máy (lên mạng tự cài)
-- tạo môi trường ảo (venv) cho python dễ dùng
-- pip install mấy cái trong app.py để chạy (t đang dùng python 3.14 còn mấy cái kia thì tao không chắc à)
+## Mạng máy tính FIT@HCMUS
 
+Đây là mã nguồn cho đồ án Lập trình Socket "Điều khiển máy tính trong cùng mạng LAN", môn Mạng máy tính, lớp 24TNT1, Khoa Công nghệ thông tin, Trường Đại học Khoa học tự nhiên - Đại học Quốc gia TP.HCM.
 
+### Thành viên:
+* **Võ Thái Thành** - 24122023
+* **Lê Huy Hoàng** - 24122034
+* **Trần Hoàng Minh Vĩ** - 24122026
 
-### BUG Hiện tại
-- không nhận dạng được ứng dụng explorer.exe trên window (chưa biết fix sao) //Fix ở trong getApplicationList() ấy - anh em
-- LH: mỗi các explorer.exe thôi hả, kệ nó luôn đi. Lúc demo đừng bật là được
+### Đường dẫn liên quan:
+* [`Log chat AI`](google.com)
+* [`Báo cáo đồ án`](google.com)
+* [`Video demo sản phẩm`](google.com)
 
+### Các bước cài đặt:
+Đầu tiên, ta có thể tải trực tiếp hoặc clone chính repository này:
+```shell
+git clone https://github.com/tthanh1223/RatProject.git
+```
+Bước tiếp theo là cài đặt môi trường `Python` (phiên bản 3.7 hoặc mới hơn) cùng các thư viện có trong `requirements.txt` và framework `.NET 10.0` 
 
+Khởi chạy tệp `Client.bat` để cho client và `Server.bat` cho server.
+* Đối với client, sử dụng trình duyệt truy cập [`localhost:3000`](localhost:3000).
+* Đối với server, hộp thoại hiện ra, chỉ cần click `Start Server` để khởi động server.
+> **Lưu ý**: khi chạy server lần đầu, sẽ có hộp thoại hiện ra yêu cầu quyền `URL Reservation` và `Filewall Rule`, chỉ cần chọn `Yes` để cấp quyền cho hệ thống.
 
-## Cái gì chưa xong
-- Tao vẫn chưa cấu trúc lại file (LH: yasou, chắc chắn là như vậy rồi)
-- Chưa làm xong quay cam (Đã xong)
-- Mấy có mấy cái cơ bản (shutdown, restart hay sleep) (LH: đã làm xong shutdown / restart)
+Chi tiết hơn, mời thầy và các bạn tham khảo [báo cáo đồ án](google.com) 
 
-
-Anh em có code gì thì nhớ pull về sửa commit, branch main luôn không cần branch phụ
-
-
-## Cách chạy nữa chứ quên 
-- Nhớ là phải cài mấy cái trên
-- Đầu tiên dùng terminal chỉ vào file WebSocketTest ấy
-- `cd ServerApp/WebSocketTest`
-- chạy `dotnet restore` // để tải thư viện thiếu về
-- chạy `dotnet run`
-- hiện lên cái window, bấm start server thôi
-
-- Sau đó tạo terminal khác vào `cd ClientApp`
-- chạy `py app.py`
-- rồi vào cái localhost - xong ngồi test thử
-
-
-# LƯU Ý: SỬA GÌ COMMIT ĐÓ DỄ THEO DÕI
-
-#TODO:
-- Client Side
-- [x] Xóa tính năng Auto Discovery trong login page
-- [x] Tạo UI cho Power: 2 nút Shutdown với Restart to đùng
-- Server Side
-- [x] Fix logic keylog theo session
-- [x] Fix logic webcam theo duration 
-- [x] Tạo login test 2 máy (đã test được trên 2 máy - nhưng còn hơi phức tạo) => 
-- [ ] Tạo file bat chạy cho phía Server
-- [x] Modulize lại ServerApp
+Ngày 22 tháng 12 năm 2025.
